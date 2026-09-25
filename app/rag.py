@@ -14,11 +14,29 @@ Rules:
 - If the sources do not contain the answer, reply exactly: "NOT_FOUND" and nothing else.
 - Do not use outside knowledge. Do not guess doses, indications or interactions.
 - Be concise: 2-6 sentences or a short bullet list. Use plain, professional language.
-- Write the answer in {language}. Keep drug names and numbers exactly as in the sources."""
+- The sources are in English; the user may want the answer in another language. Translating the
+  facts is expected and is NOT a reason to reply NOT_FOUND. Keep drug names and numbers exact."""
+
+TRANSLATE_ANSWER_PROMPT = """Translate this drug-information answer into {language}.
+Keep every citation marker like [1] or [2][3] exactly where it is. Keep drug names and all numbers
+unchanged. Output only the translation."""
 
 TRANSLATE_PROMPT = """Translate the user's pharmacy question into English for searching US FDA drug labels.
 Replace local/brand drug names with the US generic name when you are sure (e.g. paracetamol -> acetaminophen,
 Nurofen -> ibuprofen). Output ONLY the English question, nothing else."""
+
+PLAYFUL_PROMPT = """You are the witty front-desk voice of PharmaRAG, a drug-label Q&A site.
+The question below could NOT be answered from the drug labels. Decide which case it is:
+
+A) A genuine medication question we simply don't cover (a drug not in our library, a clinical
+   question the labels don't address). Reply exactly: PLAIN
+B) Something suggesting a real emergency or risk: someone may have ALREADY swallowed something
+   harmful, an overdose, poisoning, or self-harm. Reply exactly: PLAIN
+C) Clearly absurd, joking or off-topic (e.g. "can I eat expanding foam", "is pizza a medicine",
+   "what's the dose of love"). Reply with ONE or two short, playful, kind sentences (never mean,
+   never mocking the person): a light joke, then a gentle nudge to ask about a real medication.
+   If the joke item is actually toxic, make clear in a fun way that it is NOT food.
+   No medical advice, no doses, no emojis overload (max one). Write in {language}."""
 
 LANGUAGES = {"en": "English", "uk": "Ukrainian", "pl": "Polish"}
 NOT_FOUND = {
@@ -128,6 +146,18 @@ def build_context(chunks: list[dict]) -> str:
 MARKETS = {"us": "United States (FDA)"}
 
 
+def refusal(question: str, out_lang: str) -> tuple[str, bool]:
+    """When we can't answer: a playful line for absurd questions, the plain message otherwise.
+    Real-risk questions (poisoning, overdose) always get the plain, serious message."""
+    try:
+        reply = llm.generate(PLAYFUL_PROMPT.format(language=LANGUAGES[out_lang]), question).strip()
+    except Exception:  # noqa: BLE001 -- humour is optional; never fail the request because of it
+        return NOT_FOUND[out_lang], False
+    if not reply or "PLAIN" in reply or len(reply) > 400:
+        return NOT_FOUND[out_lang], False
+    return reply, True
+
+
 def ask(question: str, top_k: int | None = None, answer_language: str = "auto", market: str = "us") -> dict:
     """The question can be in any supported language; the MARKET decides which labels are searched,
     and the answer is written in `answer_language` ("auto" = same language as the question)."""
@@ -143,22 +173,34 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
     drugs, corrections = detect_drugs_fuzzy(search_q)
     base = {"detected_drugs": drugs, "corrections": corrections, "language": lang, "answer_language": out_lang,
             "market": market, "search_query": search_q if lang != "en" else None}
-    not_found = {**base, "answer": NOT_FOUND[out_lang], "found": False, "sources": []}
+    def not_found() -> dict:
+        text, playful = refusal(question, out_lang)
+        return {**base, "answer": text, "found": False, "playful": playful, "sources": []}
 
     # 1) RETRIEVE
     chunks = store.search(search_q, top_k=top_k, drugs=drugs or None)
     relevant = [c for c in chunks if c["score"] >= config.MIN_SCORE]
     if not relevant:
-        return not_found
+        return not_found()
 
     # 2) AUGMENT + 3) GENERATE
-    user_msg = f"Sources:\n{build_context(relevant)}\n\nQuestion: {question}"
-    if lang != "en":
-        user_msg += f"\n(English version of the question: {search_q})"
-    answer = llm.generate(SYSTEM_PROMPT.format(language=LANGUAGES[out_lang]), user_msg).strip()
+    def generate(language: str) -> str:
+        msg = f"Sources:\n{build_context(relevant)}\n\nQuestion: {question}"
+        if lang != "en":
+            msg += f"\n(English version of the question: {search_q})"
+        msg += f"\n\nWrite the answer in {LANGUAGES[language]}."
+        return llm.generate(SYSTEM_PROMPT, msg).strip()
+
+    answer = generate(out_lang)
+    if (not answer or "NOT_FOUND" in answer) and out_lang != "en":
+        # Some (smaller) models refuse when answer language != source language. Fall back to:
+        # answer in English (same language as the sources), then translate that answer.
+        english = generate("en")
+        if english and "NOT_FOUND" not in english:
+            answer = llm.generate(TRANSLATE_ANSWER_PROMPT.format(language=LANGUAGES[out_lang]), english).strip()
 
     if not answer or "NOT_FOUND" in answer:
-        return not_found
+        return not_found()
 
     # Drop citations that point to non-existent sources (a small hallucination guard),
     # then record which source numbers the model actually cited.

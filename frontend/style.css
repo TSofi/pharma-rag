@@ -249,3 +249,6 @@ body { background: var(--bg); }
 
 .ctl-block { display: flex; margin: 14px 0 6px; }
 .ctl-block select { flex: 1; min-width: 0; max-width: none; }
+
+.answer-body.playful { font-family: var(--serif); font-size: 20px; }
+.answer-body.playful p::before { content: "🙃 "; }

@@ -81,9 +81,32 @@ def test_refusal_when_llm_says_not_found(mocked_pipeline):
     assert res["found"] is False and res["sources"] == []
 
 
+def test_absurd_question_gets_playful_reply(monkeypatch, mocked_pipeline):
+    def fake(system, user):
+        return "Expanding foam is for window frames, not stomachs. Ask me about a real medicine!" \
+            if "witty front-desk" in system else "NOT_FOUND"
+    monkeypatch.setattr(rag.llm, "generate", fake)
+    res = rag.ask("Can I eat expanding foam?")
+    assert res["found"] is False and res["playful"] is True and "foam" in res["answer"]
+
+
+def test_serious_or_plain_refusal_is_not_joked_about(monkeypatch, mocked_pipeline):
+    monkeypatch.setattr(rag.llm, "generate", lambda system, user: "PLAIN" if "witty" in system else "NOT_FOUND")
+    res = rag.ask("My child swallowed 20 metformin tablets")
+    assert res["playful"] is False and res["answer"] == rag.NOT_FOUND["en"]
+
+
 def test_answer_language_is_passed_to_the_llm(mocked_pipeline):
     rag.ask("What is metformin used for?", answer_language="uk")
-    assert "Ukrainian" in mocked_pipeline["system"]
+    assert "Write the answer in Ukrainian" in mocked_pipeline["user"]
+
+
+def test_refusal_in_other_language_falls_back_to_english_then_translates(monkeypatch, mocked_pipeline):
+    replies = iter(["NOT_FOUND", "Metformin treats type 2 diabetes [1].", "Метформін лікує діабет 2 типу [1]."])
+    monkeypatch.setattr(rag.llm, "generate", lambda system, user: next(replies))
+    res = rag.ask("What is metformin used for?", answer_language="uk")
+    assert res["found"] is True
+    assert res["answer"].startswith("Метформін") and res["sources"][0]["cited"]
 
 
 def test_unknown_market_is_rejected():

@@ -86,7 +86,8 @@ async function ask(question) {
     if (!r.ok) throw new Error(data.detail || r.statusText);
 
     answerEl.innerHTML = renderAnswer(data.answer);
-    answerEl.classList.toggle("notfound", !data.found);
+    answerEl.classList.toggle("notfound", !data.found && !data.playful);
+    answerEl.classList.toggle("playful", !!data.playful);
     $("#detected").innerHTML = (data.detected_drugs || []).map((d) => `<span>${esc(d)}</span>`).join("");
     renderSources(data.sources);
     const cited = data.sources.filter((s) => s.cited).length;
@@ -94,7 +95,7 @@ async function ask(question) {
     $("#meta").textContent = (data.found
       ? `${cited} of ${data.sources.length} retrieved passages cited · ${((performance.now() - t0) / 1000).toFixed(1)}s` +
         (dates.length ? ` · label versions: ${dates.join(", ")}` : "") + (data.model ? ` · ${data.model}` : "")
-      : "No passage was relevant enough to answer from.") + (score ? ` · you scored ${score} while waiting 🎮` : "");
+      : data.playful ? "Not in the labels, but we appreciate the creativity." : "No passage was relevant enough to answer from.") + (score ? ` · you scored ${score} while waiting 🎮` : "");
 
     // Transparency: show how the question was interpreted (typo fixes, translation).
     const notes = [];
@@ -151,6 +152,11 @@ for (const id of ["answerLang"]) {
 
 $("#showAll").addEventListener("change", (e) => sourcesEl.classList.toggle("hide-uncited", !e.target.checked));
 sourcesEl.classList.add("hide-uncited");
+
+// ----- market selector: the main one and the one in the library drawer stay in sync -----
+for (const [from, to] of [["#market", "#libMarket"], ["#libMarket", "#market"]]) {
+  $(from).addEventListener("change", (e) => { $(to).value = e.target.value; });
+}
 
 // ----- drug library drawer -----
 const drawer = $("#library");
