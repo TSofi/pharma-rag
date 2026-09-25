@@ -9,7 +9,12 @@ ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
 # --- LLM -------------------------------------------------------------------
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()  # "gemini" | "anthropic"
+# Comma-separated, in order of preference: the first provider that answers wins.
+# e.g. "groq,gemini" = fast Groq first, Gemini as a backup.  Options: groq | gemini | anthropic
+LLM_PROVIDERS = [p.strip().lower() for p in os.getenv("LLM_PROVIDER", "gemini").split(",") if p.strip()]
+LLM_PROVIDER = ",".join(LLM_PROVIDERS)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 # Optional comma-separated backup models, used if the main one keeps failing (e.g. overloaded).

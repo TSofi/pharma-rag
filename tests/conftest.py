@@ -15,7 +15,7 @@ LABELS = [
          {"section": "Indications and Usage",
           "text": "1 INDICATIONS AND USAGE Metformin is indicated as an adjunct to diet and exercise to improve "
                   "glycemic control in adults with type 2 diabetes mellitus ( 1 )."}]},
-    {"drug": "ibuprofen", "brands": ["Advil", "Nurofen"], "url": "https://example.org/ibuprofen", "set_id": "b",
+    {"drug": "ibuprofen", "brands": ["Advil", "Nurofen", "Motrin"], "url": "https://example.org/ibuprofen", "set_id": "b",
      "effective_time": "20250101", "sections": [
          {"section": "Boxed Warning", "text": "WARNING: RISK OF SERIOUS CARDIOVASCULAR EVENTS"},
          {"section": "Mechanism of Action",

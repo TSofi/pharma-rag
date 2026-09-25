@@ -24,6 +24,12 @@ def test_typo_is_corrected_and_reported():
     assert corrections == [{"typed": "ibumporfen", "matched": "ibuprofen"}]
 
 
+def test_long_misspelling_is_corrected_but_similar_everyday_word_is_not():
+    assert rag.detect_drugs("What is ibuprol?") == ["ibuprofen"]
+    assert rag.detect_drugs("Take it in the morning, Nurofen fan") == ["ibuprofen"]   # via brand, not "morning"
+    assert rag.detect_drugs("Should I take it in the morning?") == []
+
+
 def test_everyday_words_are_not_mistaken_for_brands():
     # "leave" is close to the brand "Aleve" but must not trigger a drug filter
     assert rag.detect_drugs("Can patients leave the hospital early?") == []

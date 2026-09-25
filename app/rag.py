@@ -113,6 +113,10 @@ def detect_drugs_fuzzy(question: str) -> tuple[list[str], list[dict]]:
     known_words = set(aliases)
     for word in set(re.findall(r"[a-z][a-z-]{5,}", q)) - known_words:
         match = difflib.get_close_matches(word, known_words, n=1, cutoff=0.8)
+        if not match and len(word) >= 7:
+            # Long names tolerate a bit more damage ("ibuprol" -> ibuprofen), but only against long names,
+            # otherwise everyday words slip through ("morning" ~ "Motrin").
+            match = difflib.get_close_matches(word, [a for a in known_words if len(a) >= 7], n=1, cutoff=0.75)
         if match and aliases[match[0]] not in found:
             found.add(aliases[match[0]])
             corrections.append({"typed": word, "matched": aliases[match[0]]})

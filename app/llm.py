@@ -82,27 +82,89 @@ def _discover_backup_models() -> list[str]:
     return _discovered
 
 
-def generate(system: str, user: str) -> str:
-    global last_model_used
-    if config.LLM_PROVIDER == "anthropic":
-        last_model_used = config.ANTHROPIC_MODEL
-        return _with_retries(lambda: _anthropic(system, user))
+# ---------------------------------------------------------------- Groq (OpenAI-compatible API)
+GROQ_URL = "https://api.groq.com/openai/v1"
+_groq_model: str | None = None
 
-    # Gemini: main model with retries -> configured fallbacks -> auto-discovered backups.
-    tried: list[str] = []
+
+def _groq(system: str, user: str) -> str:
+    """Groq runs open models (Llama etc.) on custom chips: typically 1-2 s per answer."""
+    import httpx
+
+    global _groq_model
+    headers = {"Authorization": f"Bearer {config.GROQ_API_KEY}"}
+    model = _groq_model or config.GROQ_MODEL
+    body = {"model": model, "temperature": 0, "max_tokens": 1024,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+    r = httpx.post(f"{GROQ_URL}/chat/completions", json=body, headers=headers, timeout=config.LLM_TIMEOUT_S)
+    if r.status_code in (400, 404) and "model" in r.text.lower() and _groq_model is None:
+        # Model renamed/retired: pick another large chat model this key can use, and remember it.
+        ids = [m["id"] for m in httpx.get(f"{GROQ_URL}/models", headers=headers, timeout=15).json().get("data", [])]
+        pref = [i for i in ids if any(k in i for k in ("llama-3.3", "gpt-oss-120b", "llama-4", "70b"))] or ids
+        _groq_model = pref[0]
+        body["model"] = _groq_model
+        r = httpx.post(f"{GROQ_URL}/chat/completions", json=body, headers=headers, timeout=config.LLM_TIMEOUT_S)
+    if r.status_code >= 400:
+        raise RuntimeError(f"{r.status_code} {r.text[:300]}")
+    return r.json()["choices"][0]["message"]["content"] or ""
+
+
+# ---------------------------------------------------------------- circuit breaker
+# If a provider/model just failed (overloaded, timeout), skip it for a few minutes instead of making
+# every visitor wait through the same retries again.
+_cooldown_until: dict[str, float] = {}
+COOLDOWN_S = 300
+
+
+def _available(name: str) -> bool:
+    return time.time() >= _cooldown_until.get(name, 0)
+
+
+def _trip(name: str) -> None:
+    _cooldown_until[name] = time.time() + COOLDOWN_S
+
+
+def _try_gemini(system: str, user: str) -> str:
+    global last_model_used
     candidates = [config.GEMINI_MODEL] + config.GEMINI_FALLBACK_MODELS
+    candidates += [m for m in _discover_backup_models() if m not in candidates] if not _available(
+        f"gemini:{config.GEMINI_MODEL}") else []
     error: Exception | None = None
-    i = 0
-    while i < len(candidates):
-        model = candidates[i]
-        tried.append(model)
+    for i, model in enumerate(candidates):
+        key = f"gemini:{model}"
+        if not _available(key):
+            continue
         try:
-            out = _with_retries(lambda: _gemini(model, system, user), attempts=3 if i == 0 else 2)
+            out = _with_retries(lambda: _gemini(model, system, user), attempts=2)
             last_model_used = model
             return out
         except Exception as e:  # noqa: BLE001
-            error = e
-            if i == len(candidates) - 1 and len(tried) == len(candidates):
+            error, _ = e, _trip(key)
+            if i == len(candidates) - 1:
                 candidates += [m for m in _discover_backup_models() if m not in candidates]
-        i += 1
-    raise error  # type: ignore[misc]
+    raise error or RuntimeError("all Gemini models are cooling down after recent failures")
+
+
+def generate(system: str, user: str) -> str:
+    """Try providers in the configured order; a provider that fails is skipped for a few minutes."""
+    global last_model_used
+    error: Exception | None = None
+    for provider in config.LLM_PROVIDERS:
+        try:
+            if provider == "groq":
+                if not config.GROQ_API_KEY or not _available("groq"):
+                    continue
+                out = _with_retries(lambda: _groq(system, user), attempts=2)
+                last_model_used = f"groq/{_groq_model or config.GROQ_MODEL}"
+                return out
+            if provider == "anthropic":
+                out = _with_retries(lambda: _anthropic(system, user), attempts=2)
+                last_model_used = config.ANTHROPIC_MODEL
+                return out
+            if provider == "gemini":
+                return _try_gemini(system, user)
+        except Exception as e:  # noqa: BLE001
+            error = e
+            if provider == "groq":
+                _trip("groq")
+    raise error or RuntimeError("no LLM provider configured")
