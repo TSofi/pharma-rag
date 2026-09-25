@@ -1,0 +1,7 @@
+.env
+.venv
+qdrant_data
+models
+eval
+scripts
+__pycache__

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PharmaRAG</title>
+  <meta name="description" content="Ask questions about common drugs. Answers come only from official FDA labels, with every claim linked to its source." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230f5c55'/><path d='M10 22 22 10' stroke='%23f6f3ec' stroke-width='5' stroke-linecap='round'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=10" />
+</head>
+<body>
+  <div class="lava" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <header class="top">
+    <a class="brand" href="./">
+      <span class="mark" aria-hidden="true"></span>
+      <span>Pharma<b>RAG</b></span>
+    </a>
+    <button class="ghost" id="libraryBtn" aria-expanded="false" aria-controls="library">
+      Drug library <span id="drugCount" class="pill">…</span>
+    </button>
+  </header>
+
+  <main class="wrap">
+    <section class="hero" id="hero">
+      <p class="eyebrow">Ask about your drug</p>
+      <h1>Know your medicine.<br /><em>Straight from the label.</em></h1>
+    </section>
+
+    <div class="controls">
+      <label class="ctl">
+        <span>Market</span>
+        <select id="market">
+          <option value="us" selected>United States · FDA</option>
+          <option value="at" disabled>Austria · EMA + BASG (coming soon)</option>
+          <option value="pl" disabled>Poland · EMA + URPL (coming soon)</option>
+          <option value="ua" disabled>Ukraine · State Register (coming soon)</option>
+        </select>
+      </label>
+      <label class="ctl">
+        <span>Answer in</span>
+        <select id="answerLang">
+          <option value="auto" selected>Same as my question</option>
+          <option value="en">English</option>
+          <option value="uk">Українська</option>
+          <option value="pl">Polski</option>
+        </select>
+      </label>
+    </div>
+
+    <form id="askForm" class="ask" autocomplete="off">
+      <label for="q" class="sr">Your question</label>
+      <textarea id="q" rows="1" maxlength="500" placeholder="Ask about any drug…" required></textarea>
+      <button type="submit" id="askBtn" aria-label="Ask">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+      </button>
+    </form>
+
+    <div class="chips" id="chips" aria-label="Example questions">
+      <button type="button">Can amlodipine cause ankle swelling?</button>
+      <button type="button">Can I take ibuprofen with lisinopril?</button>
+      <button type="button">Is dizziness a side effect of losartan?</button>
+      <button type="button">Can sertraline and tramadol be taken together?</button>
+      <button type="button">What should I avoid while taking warfarin?</button>
+      <button type="button">Can metformin cause stomach problems?</button>
+      <button type="button">Чи можуть від аторвастатину боліти м'язи?</button>
+      <button type="button">Czy mogę brać ibuprofen z Eliquisem?</button>
+    </div>
+
+    <section id="result" class="result" hidden aria-live="polite">
+      <article class="answer card">
+        <div class="answer-head">
+          <span class="label">Answer</span>
+          <span id="detected" class="detected"></span>
+        </div>
+        <p id="notice" class="notice" hidden></p>
+        <div id="answer" class="answer-body"></div>
+        <p id="meta" class="meta"></p>
+      </article>
+
+      <div class="sources-head">
+        <h2>Sources</h2>
+        <label class="toggle"><input type="checkbox" id="showAll" /> show uncited</label>
+      </div>
+      <ol id="sources" class="sources"></ol>
+    </section>
+  </main>
+
+  <aside id="library" class="drawer" hidden>
+    <div class="drawer-inner">
+      <div class="drawer-head">
+        <h2>Drug library</h2>
+        <button class="ghost" id="closeLib" aria-label="Close">✕</button>
+      </div>
+      <label class="ctl ctl-block">
+        <span>Market</span>
+        <select id="libMarket">
+            <option value="us" selected>United States · FDA</option>
+            <option value="at" disabled>Austria · EMA + BASG (coming soon)</option>
+            <option value="pl" disabled>Poland · EMA + URPL (coming soon)</option>
+            <option value="ua" disabled>Ukraine · State Register (coming soon)</option>
+        </select>
+      </label>
+      <p class="muted" id="libNote">Official FDA labels indexed in the vector database. Click one to ask about it.</p>
+      <input id="libFilter" type="search" placeholder="Filter…" />
+      <ul id="libList" class="lib"></ul>
+    </div>
+  </aside>
+
+  <footer class="foot">
+    <p>Answers come only from official drug labels. Each sentence links to the exact label section it came from, and if the label doesn't say it, PharmaRAG says so.</p>
+    <p>Demo project for educational purposes only. Not medical advice. Always consult the full prescribing information.</p>
+    <p class="muted">Data: <a href="https://open.fda.gov/apis/drug/label/" target="_blank" rel="noopener">openFDA drug labels</a> · Retrieval: Qdrant + BGE embeddings · Generation: LLM with citation constraints</p>
+  </footer>
+
+  <script src="config.js?v=10"></script>
+  <script src="game.js?v=10"></script>
+  <script src="waiting.js?v=10"></script>
+  <script src="app.js?v=10"></script>
+</body>
+</html>

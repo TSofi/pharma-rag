@@ -1,0 +1,7 @@
+fastapi==0.141.1
+uvicorn[standard]==0.54.0
+qdrant-client==1.19.1
+fastembed==0.8.1
+google-genai==2.25.0
+anthropic==1.8.0
+python-dotenv==1.2.3

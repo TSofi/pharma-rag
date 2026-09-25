@@ -1,0 +1,47 @@
+# One drug per line:  generic name: brand names / international names (comma-separated)
+# The names after ":" let users ask with a brand name ("Zoloft") or the EU name ("paracetamol").
+# Edit this list and re-run scripts/fetch_labels.py (+ scripts/ingest.py for new drugs).
+metformin: Glucophage
+lisinopril: Zestril, Prinivil
+atorvastatin: Lipitor
+amlodipine: Norvasc
+omeprazole: Prilosec
+pantoprazole: Protonix
+levothyroxine: Synthroid, Levoxyl, Euthyrox
+simvastatin: Zocor
+losartan: Cozaar
+metoprolol: Lopressor, Toprol-XL
+carvedilol: Coreg
+hydrochlorothiazide: Microzide, HCTZ
+furosemide: Lasix
+spironolactone: Aldactone
+sertraline: Zoloft
+escitalopram: Lexapro, Cipralex
+fluoxetine: Prozac
+bupropion: Wellbutrin, Zyban
+alprazolam: Xanax
+zolpidem: Ambien, Stilnox
+gabapentin: Neurontin
+tramadol: Ultram
+ibuprofen: Advil, Motrin, Nurofen
+naproxen: Aleve, Naprosyn
+acetaminophen: Tylenol, Panadol, paracetamol
+amoxicillin: Amoxil
+azithromycin: Zithromax
+ciprofloxacin: Cipro
+doxycycline: Vibramycin, Doryx
+prednisone: Deltasone, Rayos
+albuterol: Ventolin, ProAir, salbutamol
+montelukast: Singulair
+cetirizine: Zyrtec
+loratadine: Claritin
+warfarin: Coumadin, Jantoven
+apixaban: Eliquis
+clopidogrel: Plavix
+sitagliptin: Januvia
+empagliflozin: Jardiance
+allopurinol: Zyloprim
+methotrexate: Trexall, Otrexup
+sildenafil: Viagra, Revatio
+tamsulosin: Flomax
+finasteride: Proscar, Propecia
