@@ -89,19 +89,39 @@ def test_refusal_when_llm_says_not_found(mocked_pipeline):
     assert res["found"] is False and res["sources"] == []
 
 
+def _triage(reply):
+    """Fake LLM: NOT_FOUND for the label-answer step, `reply` for the fallback triage step."""
+    return lambda system, user: reply if "fallback voice" in system else "NOT_FOUND"
+
+
 def test_absurd_question_gets_playful_reply(monkeypatch, mocked_pipeline):
-    def fake(system, user):
-        return "Expanding foam is for window frames, not stomachs. Ask me about a real medicine!" \
-            if "witty front-desk" in system else "NOT_FOUND"
-    monkeypatch.setattr(rag.llm, "generate", fake)
+    monkeypatch.setattr(rag.llm, "generate", _triage("JOKE: Expanding foam is for window frames, not stomachs."))
     res = rag.ask("Can I eat expanding foam?")
-    assert res["found"] is False and res["playful"] is True and "foam" in res["answer"]
+    assert res["found"] is False and res["mode"] == "playful" and res["playful"] is True and "foam" in res["answer"]
 
 
-def test_serious_or_plain_refusal_is_not_joked_about(monkeypatch, mocked_pipeline):
-    monkeypatch.setattr(rag.llm, "generate", lambda system, user: "PLAIN" if "witty" in system else "NOT_FOUND")
+def test_emergency_gets_fixed_message_not_generated_text(monkeypatch, mocked_pipeline):
+    monkeypatch.setattr(rag.llm, "generate", _triage("EMERGENCY"))
     res = rag.ask("My child swallowed 20 metformin tablets")
-    assert res["playful"] is False and res["answer"] == rag.NOT_FOUND["en"]
+    assert res["mode"] == "emergency" and res["answer"] == rag.EMERGENCY["en"] and res["playful"] is False
+
+
+def test_general_answer_is_marked_and_has_no_citations(monkeypatch, mocked_pipeline):
+    monkeypatch.setattr(rag.llm, "generate", _triage(
+        "GENERAL: Home tests detect hCG in urine [1]. A blood test is the most reliable. Confirm with a doctor."))
+    res = rag.ask("How do pregnancy tests work?")
+    assert res["found"] is False and res["mode"] == "general" and res["sources"] == []
+    assert "[1]" not in res["answer"] and res["answer"].startswith("Home tests")
+
+
+def test_non_health_question_gets_plain_message(monkeypatch, mocked_pipeline):
+    monkeypatch.setattr(rag.llm, "generate", _triage("PLAIN"))
+    res = rag.ask("Who won the football match yesterday?")
+    assert res["mode"] == "none" and res["answer"] == rag.NOT_FOUND["en"]
+
+
+def test_sourced_answer_mode(mocked_pipeline):
+    assert rag.ask("What is metformin used for?")["mode"] == "sourced"
 
 
 def test_answer_language_is_passed_to_the_llm(mocked_pipeline):
@@ -149,3 +169,22 @@ def test_response_includes_stage_timings(mocked_pipeline):
     res = rag.ask("What is metformin used for?")
     assert {"llm_ms", "total_ms"} <= res["timings"].keys()
     assert res["timings"]["total_ms"] >= res["timings"]["llm_ms"]
+
+
+@pytest.mark.parametrize("raw, clean", [
+    ("Avoid NSAIDs 【2】.", "Avoid NSAIDs[2]."),
+    ("Symptoms 【1†L1-L3】 【2†L1-L3】.", "Symptoms[1][2]."),
+    ("See [1, 3].", "See[1][3]."),
+    ("See [2-4].", "See[2][3][4]."),
+    ("Plain [1] stays.", "Plain[1] stays."),
+])
+def test_citation_styles_are_normalized(raw, clean):
+    assert rag.normalize_citations(raw) == clean
+
+
+def test_chatty_translation_is_rejected(monkeypatch):
+    advice = "I'm sorry you're hurt. If you've injured your finger, clean it and apply a cold pack. " * 3
+    monkeypatch.setattr(rag.llm, "generate", lambda s, u: advice)
+    assert rag.translate_query("я вдарив палець що робити") == "я вдарив палець що робити"
+    monkeypatch.setattr(rag.llm, "generate", lambda s, u: "I hit my finger, what should I do?")
+    assert rag.translate_query("я вдарив палець що робити") == "I hit my finger, what should I do?"

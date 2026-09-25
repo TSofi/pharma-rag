@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=14" />
+  <link rel="stylesheet" href="style.css?v=15" />
 </head>
 <body>
   <div class="lava" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -73,6 +73,7 @@
       <article class="answer card">
         <div class="answer-head">
           <span class="label" data-i18n="answer">Answer</span>
+          <span id="kind" class="kind"></span>
           <span id="detected" class="detected"></span>
         </div>
         <p id="notice" class="notice" hidden></p>
@@ -86,6 +87,7 @@
         <label class="toggle"><input type="checkbox" id="showAll" /> <span data-i18n="showUncited">show uncited</span></label>
       </div>
       <ol id="sources" class="sources"></ol>
+      <p class="legend"><span class="l-src" data-i18n="legendSrc">From official labels, with sources</span><span class="l-gen" data-i18n="legendGen">General AI info, no sources</span></p>
     </section>
   </main>
 
@@ -111,15 +113,15 @@
   </aside>
 
   <footer class="foot">
-    <p data-i18n="foot1">Answers come only from official drug labels. Each sentence links to the exact label section it came from, and if the label doesn't say it, PharmaRAG says so.</p>
+    <p data-i18n="foot1">Violet answers come from official drug labels: each sentence links to the exact label section. If the labels don't cover a question, you get an orange, clearly marked general answer without sources.</p>
     <p data-i18n="foot2">Demo project for educational purposes only. Not medical advice. Always consult the full prescribing information.</p>
     <p class="muted">Data: <a href="https://open.fda.gov/apis/drug/label/" target="_blank" rel="noopener">openFDA drug labels</a> · Retrieval: Qdrant + BGE embeddings · Generation: LLM with citation constraints</p>
   </footer>
 
-  <script src="config.js?v=14"></script>
-  <script src="i18n.js?v=14"></script>
-  <script src="game.js?v=14"></script>
-  <script src="waiting.js?v=14"></script>
-  <script src="app.js?v=14"></script>
+  <script src="config.js?v=15"></script>
+  <script src="i18n.js?v=15"></script>
+  <script src="game.js?v=15"></script>
+  <script src="waiting.js?v=15"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

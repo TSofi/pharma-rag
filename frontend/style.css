@@ -8,6 +8,9 @@
   --accent: #0f5c55;
   --accent-soft: #dcebe7;
   --warn: #9a4b1c;
+  --src: #6b4fc9; --src-soft: #f1edfd;
+  --gen: #c2610c; --gen-soft: #fdf1e4;
+  --sos: #b3261e; --sos-soft: #fdeceb;
   --cite-bg: #0f5c55;
   --cite-ink: #fffdf8;
   --shadow: 0 1px 2px rgba(29, 36, 34, .04), 0 8px 28px rgba(29, 36, 34, .06);
@@ -25,6 +28,9 @@
     --accent: #6cc4b6;
     --accent-soft: #1e3431;
     --warn: #e2a075;
+    --src: #b3a1f5; --src-soft: #221d33;
+    --gen: #f0a55e; --gen-soft: #2e2217;
+    --sos: #f28b82; --sos-soft: #331b1a;
     --cite-bg: #6cc4b6;
     --cite-ink: #0e1413;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 28px rgba(0, 0, 0, .25);
@@ -255,3 +261,24 @@ body { background: var(--bg); }
 
 .meta.timing { margin-top: 2px; font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
 .meta.timing:empty { display: none; }
+
+/* Answer kinds: violet = from the labels with citations; orange = general AI info without sources;
+   red = possible emergency. The badge in the card header says it in words too (not colour only). */
+.answer { border-left: 4px solid var(--line); transition: border-color .2s, background .2s; }
+.answer.mode-sourced { border-left-color: var(--src); }
+.answer.mode-general { border-left-color: var(--gen); background: linear-gradient(0deg, var(--gen-soft), var(--gen-soft)), var(--surface); }
+.answer.mode-emergency { border-left-color: var(--sos); background: linear-gradient(0deg, var(--sos-soft), var(--sos-soft)), var(--surface); }
+.kind { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; padding: 3px 10px; border-radius: 999px; }
+.kind:empty { display: none; }
+.mode-sourced .kind { background: var(--src-soft); color: var(--src); }
+.mode-general .kind { background: var(--gen); color: var(--surface); }
+.mode-emergency .kind { background: var(--sos); color: #fff; }
+.mode-sourced .answer-body .cite { background: var(--src); color: var(--surface); }
+.src .cite { background: var(--src); color: var(--surface); }
+.answer-body.emergency { color: var(--sos); font-weight: 600; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
+.legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; vertical-align: 0; }
+.legend .l-src::before { background: var(--src); }
+.legend .l-gen::before { background: var(--gen); }
+.answer-head { justify-content: flex-start; }
+.answer-head .detected { margin-left: auto; }

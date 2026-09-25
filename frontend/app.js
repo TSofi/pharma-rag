@@ -62,6 +62,16 @@ function flashSource(n) {
   setTimeout(() => el.classList.remove("flash"), 1400);
 }
 
+// Violet card = answer from the labels with citations; orange = general AI info; red = emergency.
+const card = document.querySelector(".answer.card");
+function setMode(mode) {
+  card.classList.remove("mode-sourced", "mode-general", "mode-emergency");
+  if (["sourced", "general", "emergency"].includes(mode)) card.classList.add(`mode-${mode}`);
+  const kind = { sourced: "kindSourced", general: "kindGeneral", emergency: "kindEmergency" }[mode];
+  $("#kind").textContent = kind ? t(kind) : "";
+  card.dataset.mode = mode;
+}
+
 async function ask(question) {
   $("#hero").classList.add("compact");
   $("#chips").hidden = true;
@@ -74,6 +84,7 @@ async function ask(question) {
   $("#notice").hidden = true;
   document.querySelector(".sources-head").hidden = true;
   answerEl.className = "answer-body";
+  setMode("");
   const waiting = Waiting.start(answerEl, API);
   sourcesEl.innerHTML = "";
   const t0 = performance.now();
@@ -87,9 +98,12 @@ async function ask(question) {
     const score = waiting.stop();
     if (!r.ok) throw new Error(data.detail || r.statusText);
 
+    const mode = data.mode || (data.found ? "sourced" : data.playful ? "playful" : "none");
     answerEl.innerHTML = renderAnswer(data.answer);
-    answerEl.classList.toggle("notfound", !data.found && !data.playful);
-    answerEl.classList.toggle("playful", !!data.playful);
+    answerEl.classList.toggle("notfound", mode === "none");
+    answerEl.classList.toggle("playful", mode === "playful");
+    answerEl.classList.toggle("emergency", mode === "emergency");
+    setMode(mode);
     $("#detected").innerHTML = (data.detected_drugs || []).map((d) => `<span>${esc(d)}</span>`).join("");
     renderSources(data.sources);
     const cited = data.sources.filter((s) => s.cited).length;
@@ -97,7 +111,7 @@ async function ask(question) {
     $("#meta").textContent = (data.found
       ? t("metaFound", { cited, total: data.sources.length, secs: ((performance.now() - t0) / 1000).toFixed(1) }) +
         (dates.length ? " · " + t("metaVersions", { dates: dates.join(", ") }) : "") + (data.model ? ` · ${data.model}` : "")
-      : data.playful ? t("metaPlayful") : t("metaNone")) + (score ? " · " + t("metaScore", { n: score }) : "");
+      : { playful: t("metaPlayful"), general: t("metaGeneral"), emergency: t("metaEmergency") }[mode] || t("metaNone")) + (score ? " · " + t("metaScore", { n: score }) : "");
 
     // Latency breakdown: where did the time go? (retrieval vs LLM vs cold start / network)
     const tm = data.timings || {};
@@ -121,6 +135,7 @@ async function ask(question) {
   } catch (e) {
     waiting.stop();
     answerEl.className = "answer-body notfound";
+    setMode("");
     const busy = /503|UNAVAILABLE|overload|high demand|429|RESOURCE_EXHAUSTED/i.test(e.message);
     answerEl.innerHTML = busy
       ? `<p>${t("busy")}</p>
@@ -159,7 +174,10 @@ document.addEventListener("click", (e) => {
 });
 
 // The "Answer in" choice also sets the interface language ("Same as my question" = English UI).
-const applyLang = () => I18N.apply($("#answerLang").value === "auto" ? "en" : $("#answerLang").value);
+const applyLang = () => {
+  I18N.apply($("#answerLang").value === "auto" ? "en" : $("#answerLang").value);
+  if (card.dataset.mode) setMode(card.dataset.mode);
+};
 $("#answerLang").addEventListener("change", applyLang);
 
 for (const id of ["answerLang"]) {
