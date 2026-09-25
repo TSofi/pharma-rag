@@ -128,11 +128,14 @@ def _facts() -> list[dict]:
     return json.loads(FACTS_FILE.read_text(encoding="utf-8")) if FACTS_FILE.exists() else []
 
 
-def random_fact(seen: set[str] | None = None) -> dict:
-    """A random fact the viewer hasn't seen yet in this session (by drug)."""
+def random_fact(seen: set[str] | None = None, lang: str = "en") -> dict:
+    """A random fact the viewer hasn't seen yet in this session (by drug), in the UI language."""
     facts = _facts()
     fresh = [f for f in facts if f["drug"] not in (seen or set())]
-    return random.choice(fresh or facts) if facts else {}
+    if not facts:
+        return {}
+    f = random.choice(fresh or facts)
+    return {"drug": f["drug"], "text": f.get(f"text_{lang}", f["text"]), "source": f["source"], "url": f["url"]}
 
 
 def build_context(chunks: list[dict]) -> str:
@@ -150,7 +153,9 @@ def refusal(question: str, out_lang: str) -> tuple[str, bool]:
     """When we can't answer: a playful line for absurd questions, the plain message otherwise.
     Real-risk questions (poisoning, overdose) always get the plain, serious message."""
     try:
-        reply = llm.generate(PLAYFUL_PROMPT.format(language=LANGUAGES[out_lang]), question).strip()
+        reply = llm.generate(PLAYFUL_PROMPT.format(language=LANGUAGES[out_lang]),
+                             f"Question: {question}\n\nIf you reply with a joke, write it in {LANGUAGES[out_lang]} "
+                             f"(regardless of the question's language).").strip()
     except Exception:  # noqa: BLE001 -- humour is optional; never fail the request because of it
         return NOT_FOUND[out_lang], False
     if not reply or "PLAIN" in reply or len(reply) > 400:

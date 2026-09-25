@@ -145,10 +145,13 @@ window.PillGame = (() => {
 
   function create(canvas, { onScore = () => {}, onBest = () => {} } = {}) {
     const ctx = canvas.getContext("2d");
-    let g, raf, running = false, fx = [];
+    let g, raf, running = false, fx = [], last = 0;
+    // Speed is in "pixels per 60fps-frame". Every run starts slow and speeds up gradually,
+    // and all movement is scaled by real elapsed time, so 120/144 Hz screens aren't faster.
+    const START_SPEED = 2.4, MAX_SPEED = 7.5, ACCEL = 0.0016;
 
     function reset() {
-      g = { y: 0, vy: 0, obs: [], t: 0, speed: 4.2, score: 0, next: 60, over: 0, escaped: 0, world: pickWorld() };
+      g = { y: 0, vy: 0, obs: [], t: 0, speed: START_SPEED, score: 0, next: 90, over: 0, escaped: 0, world: pickWorld() };
       fx = [];
     }
     const jump = () => { if (g && g.y === 0 && !g.over) g.vy = 10.5; };
@@ -156,8 +159,10 @@ window.PillGame = (() => {
       g.over = 50; g.msg = msg; best = Math.max(best, Math.floor(g.score)); onBest(best);
     };
 
-    function frame() {
+    function frame(now) {
       if (!running) return;
+      const dt = last ? Math.min(3, (now - last) / (1000 / 60)) : 1;  // 1.0 == one 60 fps frame
+      last = now;
       const css = getComputedStyle(document.documentElement);
       const c = {
         line: css.getPropertyValue("--line").trim(), ink: css.getPropertyValue("--muted").trim(),
@@ -170,15 +175,16 @@ window.PillGame = (() => {
       ctx.clearRect(0, 0, W, H);
       const world = g.world, px = 48;
 
-      if (g.over) { g.over--; if (!g.over) reset(); }
+      if (g.over) { g.over -= dt; if (g.over <= 0) reset(); }
       else {
-        g.t++; g.speed += 0.0025; g.score += 0.1;
-        g.vy -= 0.62; g.y = Math.max(0, g.y + g.vy); if (g.y === 0) g.vy = 0;
-        if (--g.next <= 0) {
+        g.t += dt; g.speed = Math.min(MAX_SPEED, g.speed + ACCEL * dt); g.score += 0.1 * dt;
+        g.vy -= 0.62 * dt; g.y = Math.max(0, g.y + g.vy * dt); if (g.y === 0) g.vy = 0;
+        g.next -= dt;
+        if (g.next <= 0) {
           g.obs.push({ x: W + 14, r: 9 + Math.random() * 6, fly: Math.random() < (world.reverse ? 0.35 : 0.18) });
-          g.next = 55 + Math.random() * 60 - Math.min(25, g.speed * 2);
+          g.next = 70 + Math.random() * 70 - Math.min(30, g.speed * 3);
         }
-        for (const o of g.obs) o.x -= g.speed;
+        for (const o of g.obs) o.x -= g.speed * dt;
         for (const o of g.obs) if (world.reverse && !o.hit && !o.gone && o.x < px - 26) {
           o.gone = true; g.escaped++;
           if (g.escaped >= 3) end("They got away!");
@@ -208,9 +214,9 @@ window.PillGame = (() => {
 
       // pop particles / "+10"
       for (const p of fx) {
-        p.life--;
+        p.life -= dt;
         if (p.text) { ctx.fillStyle = c.accent; ctx.font = "700 13px Inter, sans-serif"; ctx.textAlign = "center"; ctx.fillText(p.text, p.x, p.y - (40 - p.life) / 2); }
-        else { p.x += p.vx; p.y += p.vy; p.vy += 0.2; ctx.fillStyle = c.accent; ctx.globalAlpha = p.life / 30; ctx.fillRect(p.x, p.y, 3, 3); ctx.globalAlpha = 1; }
+        else { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 0.2 * dt; ctx.fillStyle = c.accent; ctx.globalAlpha = p.life / 30; ctx.fillRect(p.x, p.y, 3, 3); ctx.globalAlpha = 1; }
       }
       fx = fx.filter((p) => p.life > 0);
 
@@ -226,7 +232,7 @@ window.PillGame = (() => {
     canvas.addEventListener("pointerdown", jump);
     return {
       jump,
-      start() { if (!g) reset(); if (!running) { running = true; raf = requestAnimationFrame(frame); } },
+      start() { if (!g) reset(); if (!running) { running = true; last = 0; raf = requestAnimationFrame(frame); } },
       pause() { running = false; cancelAnimationFrame(raf); },
       stop() { running = false; cancelAnimationFrame(raf); const s = g ? Math.floor(g.score) : 0; best = Math.max(best, s); return s; },
       get best() { return best; },

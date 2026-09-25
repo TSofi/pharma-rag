@@ -1,4 +1,5 @@
 const API = (window.API_BASE || "").replace(/\/$/, "");
+const t = (k, v) => I18N.t(k, v);
 const $ = (s) => document.querySelector(s);
 
 const form = $("#askForm"), q = $("#q"), btn = $("#askBtn");
@@ -40,14 +41,14 @@ function renderSources(sources) {
         <span class="src-drug">${esc(s.drug)}</span>
         ${s.brands?.length ? `<span class="muted">${esc(s.brands.slice(0, 2).join(", "))}</span>` : ""}
         <span class="src-sec">${esc(s.section)}</span>
-        <span class="src-score" title="Cosine similarity between your question and this passage">
+        <span class="src-score" title="${esc(t("scoreTitle"))}">
           <span class="bar"><i style="width:${Math.max(0, Math.min(1, s.score)) * 100}%"></i></span>${s.score.toFixed(2)}
         </span>
       </div>
       <p class="src-text">${esc(s.text)}</p>
       <div class="src-foot">
-        <button type="button" class="linkish" data-expand>Show full passage</button>
-        <a href="${esc(s.url)}" target="_blank" rel="noopener">Open label on DailyMed ↗</a>
+        <button type="button" class="linkish" data-expand>${t("showFull")}</button>
+        <a href="${esc(s.url)}" target="_blank" rel="noopener">${t("openLabel")}</a>
       </div>
     </li>`).join("");
 }
@@ -68,7 +69,7 @@ async function ask(question) {
   result.hidden = false;
   btn.disabled = true;
   $("#detected").innerHTML = "";
-  $("#meta").textContent = "Searching labels and writing a sourced answer…";
+  $("#meta").textContent = t("searching");
   $("#notice").hidden = true;
   document.querySelector(".sources-head").hidden = true;
   answerEl.className = "answer-body";
@@ -93,14 +94,14 @@ async function ask(question) {
     const cited = data.sources.filter((s) => s.cited).length;
     const dates = [...new Set(data.sources.filter((s) => s.cited).map((s) => fmtDate(s.effective_time)).filter(Boolean))];
     $("#meta").textContent = (data.found
-      ? `${cited} of ${data.sources.length} retrieved passages cited · ${((performance.now() - t0) / 1000).toFixed(1)}s` +
-        (dates.length ? ` · label versions: ${dates.join(", ")}` : "") + (data.model ? ` · ${data.model}` : "")
-      : data.playful ? "Not in the labels, but we appreciate the creativity." : "No passage was relevant enough to answer from.") + (score ? ` · you scored ${score} while waiting 🎮` : "");
+      ? t("metaFound", { cited, total: data.sources.length, secs: ((performance.now() - t0) / 1000).toFixed(1) }) +
+        (dates.length ? " · " + t("metaVersions", { dates: dates.join(", ") }) : "") + (data.model ? ` · ${data.model}` : "")
+      : data.playful ? t("metaPlayful") : t("metaNone")) + (score ? " · " + t("metaScore", { n: score }) : "");
 
     // Transparency: show how the question was interpreted (typo fixes, translation).
     const notes = [];
-    for (const c of data.corrections || []) notes.push(`Interpreted “${esc(c.typed)}” as <b>${esc(c.matched)}</b>.`);
-    if (data.search_query) notes.push(`Searched the English labels for: “${esc(data.search_query)}”`);
+    for (const c of data.corrections || []) notes.push(t("interpreted", { typed: esc(c.typed), matched: esc(c.matched) }));
+    if (data.search_query) notes.push(t("searchedFor", { q: esc(data.search_query) }));
     $("#notice").innerHTML = notes.join(" ");
     $("#notice").hidden = !notes.length;
     document.querySelector(".sources-head").hidden = !data.sources.length;
@@ -109,14 +110,14 @@ async function ask(question) {
     answerEl.className = "answer-body notfound";
     const busy = /503|UNAVAILABLE|overload|high demand|429|RESOURCE_EXHAUSTED/i.test(e.message);
     answerEl.innerHTML = busy
-      ? `<p>The AI model is overloaded right now (free tier). Your question is fine, so please try again in a moment.</p>
-         <button type="button" class="retry">Try again</button>
-         <details class="err"><summary>Technical details</summary><code>${esc(e.message)}</code></details>`
-      : `<p>Something went wrong.</p><button type="button" class="retry">Try again</button>
-         <details class="err" open><summary>Technical details</summary><code>${esc(e.message)}</code></details>`;
+      ? `<p>${t("busy")}</p>
+         <button type="button" class="retry">${t("retry")}</button>
+         <details class="err"><summary>${t("details")}</summary><code>${esc(e.message)}</code></details>`
+      : `<p>${t("wrong")}</p><button type="button" class="retry">${t("retry")}</button>
+         <details class="err" open><summary>${t("details")}</summary><code>${esc(e.message)}</code></details>`;
     answerEl.querySelector(".retry").onclick = () => ask(question);
     document.querySelector(".sources-head").hidden = true;
-    $("#meta").textContent = e instanceof TypeError ? "Can't reach the API. Is the backend running?" : busy ? "" : "The API returned an error.";
+    $("#meta").textContent = e instanceof TypeError ? t("noApi") : busy ? "" : t("apiErr");
   } finally {
     btn.disabled = false;
   }
@@ -138,17 +139,22 @@ document.addEventListener("click", (e) => {
   if (c) flashSource(c.dataset.src);
   const x = e.target.closest("[data-expand]");
   if (x) {
-    const t = x.closest(".src").querySelector(".src-text");
-    t.classList.toggle("open");
-    x.textContent = t.classList.contains("open") ? "Collapse" : "Show full passage";
+    const txt = x.closest(".src").querySelector(".src-text");
+    txt.classList.toggle("open");
+    x.textContent = txt.classList.contains("open") ? t("collapse") : t("showFull");
   }
 });
+
+// The "Answer in" choice also sets the interface language ("Same as my question" = English UI).
+const applyLang = () => I18N.apply($("#answerLang").value === "auto" ? "en" : $("#answerLang").value);
+$("#answerLang").addEventListener("change", applyLang);
 
 for (const id of ["answerLang"]) {
   const el = $("#" + id);
   try { const v = localStorage.getItem(id); if (v && [...el.options].some((o) => o.value === v)) el.value = v; } catch { /* no storage */ }
   el.addEventListener("change", () => { try { localStorage.setItem(id, el.value); } catch { /* no storage */ } });
 }
+applyLang();
 
 $("#showAll").addEventListener("change", (e) => sourcesEl.classList.toggle("hide-uncited", !e.target.checked));
 sourcesEl.classList.add("hide-uncited");
@@ -177,7 +183,7 @@ $("#libFilter").addEventListener("input", (e) => renderLib(e.target.value));
 $("#libList").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
   toggleLib(false);
-  q.value = `What is ${b.dataset.drug} used for?`;
+  q.value = t("libAsk", { drug: b.dataset.drug });
   autosize();
   q.focus();
 });

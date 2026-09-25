@@ -12,8 +12,8 @@ window.Waiting = (() => {
       <div class="wait">
         <div class="wait-top">
           <div class="wait-tabs" role="tablist">
-            <button type="button" data-mode="game" role="tab">Play while you wait</button>
-            <button type="button" data-mode="fact" role="tab">Did you know?</button>
+            <button type="button" data-mode="game" role="tab">${I18N.t("tabGame")}</button>
+            <button type="button" data-mode="fact" role="tab">${I18N.t("tabFact")}</button>
           </div>
           <span class="wait-timer" aria-live="off">0s</span>
         </div>
@@ -21,7 +21,7 @@ window.Waiting = (() => {
         <figure class="fact" hidden><span class="fact-emoji" aria-hidden="true">💡</span><blockquote></blockquote><figcaption></figcaption></figure>
         <div class="game">
           <canvas height="150" aria-label="Mini game: press Space or tap to jump over obstacles"></canvas>
-          <p class="game-hint">Space / ↑ / tap to jump · score <b class="g-score">0</b> · best <b class="g-best">${window.__pillBest || 0}</b></p>
+          <p class="game-hint">${I18N.t("gameHint", { score: '<b class="g-score">0</b>', best: `<b class="g-best">${window.__pillBest || 0}</b>` })}</p>
         </div>
       </div>`;
 
@@ -47,7 +47,7 @@ window.Waiting = (() => {
     // ---- facts ----
     async function nextFact() {
       try {
-        const f = await (await fetch(`${API}/api/fact?seen=${encodeURIComponent(seen.slice(-30).join(","))}`)).json();
+        const f = await (await fetch(`${API}/api/fact?lang=${I18N.lang}&seen=${encodeURIComponent(seen.slice(-30).join(","))}`)).json();
         if (!alive || !f.text) return;
         seen.push(f.drug);
         const fig = $(".fact");

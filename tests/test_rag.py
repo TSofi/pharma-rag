@@ -1,5 +1,7 @@
 """Unit tests for the parts of the pipeline that don't need a model: drug detection, typo
 correction, language detection, chunking and the citation guard."""
+import re
+
 import pytest
 
 from app import rag
@@ -129,3 +131,9 @@ def test_facts_file_is_valid_and_matches_library():
 def test_facts_do_not_repeat_seen_drugs():
     seen = {f["drug"] for f in rag._facts()} - {"metformin"}
     assert rag.random_fact(seen)["drug"] == "metformin"
+
+
+def test_facts_are_translated():
+    for f in rag._facts():
+        assert f.get("text_uk") and f.get("text_pl")
+    assert re.search("[а-яіїє]", rag.random_fact(lang="uk")["text"])

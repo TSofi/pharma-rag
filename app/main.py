@@ -46,9 +46,9 @@ def drugs():
 
 
 @app.get("/api/fact")
-def fact(seen: str = ""):
+def fact(seen: str = "", lang: Literal["en", "uk", "pl"] = "en"):
     """A short curated fact for the loading screen. `seen` = drugs already shown (comma-separated)."""
-    return rag.random_fact({d for d in seen.split(",") if d})
+    return rag.random_fact({d for d in seen.split(",") if d}, lang)
 
 
 @app.post("/api/ask")

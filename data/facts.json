@@ -3,216 +3,288 @@
   "drug": "metformin",
   "text": "Metformin traces back to goat's rue (Galega officinalis), a flowering plant used in medieval European folk medicine. Its active compound inspired the drug.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Metformin"
+  "url": "https://en.wikipedia.org/wiki/Metformin",
+  "text_uk": "Метформін походить від козлятника лікарського (Galega officinalis), квітки з середньовічної європейської народної медицини. Її активна речовина надихнула створення ліків.",
+  "text_pl": "Metformina wywodzi się od rutwicy lekarskiej (Galega officinalis), rośliny używanej w średniowiecznej medycynie ludowej. Jej aktywny związek zainspirował powstanie leku."
  },
  {
   "drug": "warfarin",
   "text": "Warfarin's name comes from WARF (Wisconsin Alumni Research Foundation), which funded its discovery, plus “-arin” from coumarin.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Warfarin"
+  "url": "https://en.wikipedia.org/wiki/Warfarin",
+  "text_uk": "Назва «варфарин» походить від WARF (Wisconsin Alumni Research Foundation), яка фінансувала його відкриття, плюс «-арин» від кумарину.",
+  "text_pl": "Nazwa „warfaryna” pochodzi od WARF (Wisconsin Alumni Research Foundation), która sfinansowała jej odkrycie, plus „-aryna” od kumaryny."
  },
  {
   "drug": "warfarin",
   "text": "Before it became a heart medicine, warfarin was sold as rat poison. Its story began in the 1920s, when cattle bled after eating spoiled sweet clover.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Warfarin"
+  "url": "https://en.wikipedia.org/wiki/Warfarin",
+  "text_uk": "Перш ніж стати ліками для серця, варфарин продавали як отруту для щурів. Усе почалося в 1920-х, коли корови кровоточили, наївшись зіпсованого буркуну.",
+  "text_pl": "Zanim warfaryna stała się lekiem na serce, sprzedawano ją jako trutkę na szczury. Wszystko zaczęło się w latach 20., gdy krowy krwawiły po zjedzeniu zepsutego nostrzyku."
  },
  {
   "drug": "sildenafil",
   "text": "Sildenafil was first studied as a treatment for angina (chest pain). Researchers only noticed its best-known effect during the clinical trials.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Sildenafil"
+  "url": "https://en.wikipedia.org/wiki/Sildenafil",
+  "text_uk": "Силденафіл спершу вивчали як ліки від стенокардії (болю в грудях). Його найвідомішу дію помітили вже під час клінічних випробувань.",
+  "text_pl": "Sildenafil badano najpierw jako lek na dławicę piersiową. Jego najbardziej znane działanie zauważono dopiero podczas badań klinicznych."
  },
  {
   "drug": "acetaminophen",
   "text": "“Acetaminophen” (US) and “paracetamol” (Europe) are the same drug. Both names are built from its chemical name, para-acetylaminophenol.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Paracetamol"
+  "url": "https://en.wikipedia.org/wiki/Paracetamol",
+  "text_uk": "«Ацетамінофен» (США) і «парацетамол» (Європа) — це той самий препарат. Обидві назви утворені від хімічної назви пара-ацетиламінофенол.",
+  "text_pl": "„Acetaminofen” (USA) i „paracetamol” (Europa) to ten sam lek. Obie nazwy pochodzą od nazwy chemicznej para-acetyloaminofenol."
  },
  {
   "drug": "albuterol",
   "text": "Albuterol (US) and salbutamol (Europe) are exactly the same molecule, just with different official names on each side of the Atlantic.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Salbutamol"
+  "url": "https://en.wikipedia.org/wiki/Salbutamol",
+  "text_uk": "Альбутерол (США) і сальбутамол (Європа) — абсолютно та сама молекула, просто з різними офіційними назвами по обидва боки Атлантики.",
+  "text_pl": "Albuterol (USA) i salbutamol (Europa) to dokładnie ta sama cząsteczka, tylko z innymi oficjalnymi nazwami po obu stronach Atlantyku."
  },
  {
   "drug": "atorvastatin",
   "text": "Atorvastatin (Lipitor) is one of the best-selling drugs in history. For years it was the world's top-selling medicine.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Atorvastatin"
+  "url": "https://en.wikipedia.org/wiki/Atorvastatin",
+  "text_uk": "Аторвастатин (Ліпітор) — один із найпродаваніших препаратів в історії. Кілька років поспіль він був найпопулярнішими ліками у світі.",
+  "text_pl": "Atorwastatyna (Lipitor) to jeden z najlepiej sprzedających się leków w historii. Przez lata była najpopularniejszym lekiem na świecie."
  },
  {
   "drug": "simvastatin",
   "text": "Statins started with fungi: simvastatin is made from a compound produced by the mould Aspergillus terreus.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Simvastatin"
+  "url": "https://en.wikipedia.org/wiki/Simvastatin",
+  "text_uk": "Статини почалися з грибів: симвастатин виготовляють із речовини, яку продукує пліснява Aspergillus terreus.",
+  "text_pl": "Statyny zaczęły się od grzybów: symwastatynę wytwarza się ze związku produkowanego przez pleśń Aspergillus terreus."
  },
  {
   "drug": "omeprazole",
   "text": "Omeprazole was the first proton pump inhibitor. It blocks the tiny “pumps” in the stomach lining that release acid.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Omeprazole"
+  "url": "https://en.wikipedia.org/wiki/Omeprazole",
+  "text_uk": "Омепразол став першим інгібітором протонної помпи. Він блокує крихітні «насоси» в слизовій шлунка, які виділяють кислоту.",
+  "text_pl": "Omeprazol był pierwszym inhibitorem pompy protonowej. Blokuje maleńkie „pompy” w błonie żołądka, które wydzielają kwas."
  },
  {
   "drug": "bupropion",
   "text": "The same molecule, bupropion, is sold as an antidepressant (Wellbutrin) and as a quit-smoking aid (Zyban).",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Bupropion"
+  "url": "https://en.wikipedia.org/wiki/Bupropion",
+  "text_uk": "Та сама молекула, бупропіон, продається і як антидепресант (Wellbutrin), і як засіб, щоб кинути курити (Zyban).",
+  "text_pl": "Ta sama cząsteczka, bupropion, jest sprzedawana jako antydepresant (Wellbutrin) i jako lek pomagający rzucić palenie (Zyban)."
  },
  {
   "drug": "allopurinol",
   "text": "Allopurinol was developed by Gertrude Elion and George Hitchings, who shared the 1988 Nobel Prize in Physiology or Medicine.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Allopurinol"
+  "url": "https://en.wikipedia.org/wiki/Allopurinol",
+  "text_uk": "Алопуринол розробили Гертруда Елайон і Джордж Гітчингс, які розділили Нобелівську премію з фізіології та медицини 1988 року.",
+  "text_pl": "Allopurynol opracowali Gertrude Elion i George Hitchings, którzy podzielili się Nagrodą Nobla w dziedzinie fizjologii lub medycyny w 1988 roku."
  },
  {
   "drug": "ibuprofen",
   "text": "Ibuprofen was discovered in the 1960s by a team at Boots in the UK, led by pharmacologist Stewart Adams.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Ibuprofen"
+  "url": "https://en.wikipedia.org/wiki/Ibuprofen",
+  "text_uk": "Ібупрофен відкрили в 1960-х у британській компанії Boots — командою під керівництвом фармаколога Стюарта Адамса.",
+  "text_pl": "Ibuprofen odkryto w latach 60. w brytyjskiej firmie Boots, w zespole kierowanym przez farmakologa Stewarta Adamsa."
  },
  {
   "drug": "amoxicillin",
   "text": "Amoxicillin belongs to the penicillin family, whose story began in 1928 when Alexander Fleming noticed mould killing bacteria on a forgotten dish.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Amoxicillin"
+  "url": "https://en.wikipedia.org/wiki/Amoxicillin",
+  "text_uk": "Амоксицилін належить до родини пеніцилінів, історія яких почалася 1928 року, коли Александр Флемінг помітив, що пліснява вбиває бактерії на забутій чашці.",
+  "text_pl": "Amoksycylina należy do rodziny penicylin, których historia zaczęła się w 1928 roku, gdy Aleksander Fleming zauważył pleśń zabijającą bakterie na zapomnianej płytce."
  },
  {
   "drug": "azithromycin",
   "text": "Azithromycin was discovered in 1980 by chemists at Pliva, a pharmaceutical company in Zagreb, Croatia.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Azithromycin"
+  "url": "https://en.wikipedia.org/wiki/Azithromycin",
+  "text_uk": "Азитроміцин відкрили 1980 року хіміки компанії Pliva у Загребі, Хорватія.",
+  "text_pl": "Azytromycynę odkryli w 1980 roku chemicy firmy Pliva w Zagrzebiu w Chorwacji."
  },
  {
   "drug": "clopidogrel",
   "text": "Clopidogrel is a prodrug: it does nothing until the liver converts it. People with certain CYP2C19 gene variants activate it poorly.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Clopidogrel"
+  "url": "https://en.wikipedia.org/wiki/Clopidogrel",
+  "text_uk": "Клопідогрел — проліки: він не діє, доки його не перетворить печінка. Люди з певними варіантами гена CYP2C19 активують його погано.",
+  "text_pl": "Klopidogrel to prolek: nie działa, dopóki nie przekształci go wątroba. Osoby z pewnymi wariantami genu CYP2C19 aktywują go słabo."
  },
  {
   "drug": "finasteride",
   "text": "Finasteride is sold at one strength for an enlarged prostate (Proscar) and at a much lower strength for hair loss (Propecia).",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Finasteride"
+  "url": "https://en.wikipedia.org/wiki/Finasteride",
+  "text_uk": "Фінастерид продається в одній дозі для лікування збільшеної простати (Proscar) і в значно меншій — від облисіння (Propecia).",
+  "text_pl": "Finasteryd sprzedaje się w jednej dawce na powiększoną prostatę (Proscar) i w znacznie mniejszej na łysienie (Propecia)."
  },
  {
   "drug": "prednisone",
   "text": "Prednisone is a prodrug: the liver turns it into prednisolone, the form that actually calms inflammation.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Prednisone"
+  "url": "https://en.wikipedia.org/wiki/Prednisone",
+  "text_uk": "Преднізон — проліки: печінка перетворює його на преднізолон, форму, яка й гасить запалення.",
+  "text_pl": "Prednizon to prolek: wątroba zamienia go w prednizolon, formę, która faktycznie wycisza stan zapalny."
  },
  {
   "drug": "empagliflozin",
   "text": "Empagliflozin lowers blood sugar in an unusual way: it makes the kidneys let extra glucose leave the body in urine.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Empagliflozin"
+  "url": "https://en.wikipedia.org/wiki/Empagliflozin",
+  "text_uk": "Емпагліфлозин знижує цукор незвичним способом: змушує нирки виводити зайву глюкозу з сечею.",
+  "text_pl": "Empagliflozyna obniża cukier w nietypowy sposób: sprawia, że nerki usuwają nadmiar glukozy z moczem."
  },
  {
   "drug": "gabapentin",
   "text": "Gabapentin was designed to mimic the brain messenger GABA, but it turns out not to act on GABA receptors at all.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Gabapentin"
+  "url": "https://en.wikipedia.org/wiki/Gabapentin",
+  "text_uk": "Габапентин задумували як імітатор мозкового медіатора ГАМК, але виявилося, що на ГАМК-рецептори він не діє взагалі.",
+  "text_pl": "Gabapentyna miała naśladować przekaźnik mózgowy GABA, ale okazało się, że w ogóle nie działa na receptory GABA."
  },
  {
   "drug": "escitalopram",
   "text": "Escitalopram is literally half of citalopram: it is only the “left-handed” mirror-image version (S-enantiomer) of the molecule.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Escitalopram"
+  "url": "https://en.wikipedia.org/wiki/Escitalopram",
+  "text_uk": "Есциталопрам — буквально половина циталопраму: це лише «лівостороння» дзеркальна версія молекули (S-енантіомер).",
+  "text_pl": "Escitalopram to dosłownie połowa citalopramu: tylko „lewoskrętna” lustrzana wersja cząsteczki (S-enancjomer)."
  },
  {
   "drug": "cetirizine",
   "text": "Cetirizine is made in the body from an older antihistamine, hydroxyzine. It is a less drowsy descendant.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Cetirizine"
+  "url": "https://en.wikipedia.org/wiki/Cetirizine",
+  "text_uk": "Цетиризин утворюється в організмі зі старішого антигістамінного препарату, гідроксизину. Це його менш снодійний «нащадок».",
+  "text_pl": "Cetyryzyna powstaje w organizmie ze starszego leku przeciwhistaminowego, hydroksyzyny. To jej mniej usypiający „potomek”."
  },
  {
   "drug": "loratadine",
   "text": "Newer antihistamines like loratadine cause less drowsiness because they barely cross from the blood into the brain.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Loratadine"
+  "url": "https://en.wikipedia.org/wiki/Loratadine",
+  "text_uk": "Новіші антигістамінні, як-от лоратадин, менше присипляють, бо майже не проникають із крові в мозок.",
+  "text_pl": "Nowsze leki przeciwhistaminowe, jak loratadyna, mniej usypiają, bo prawie nie przenikają z krwi do mózgu."
  },
  {
   "drug": "furosemide",
   "text": "The brand name Lasix is often said to come from “lasts six (hours)”, the typical duration of furosemide's effect.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Furosemide"
+  "url": "https://en.wikipedia.org/wiki/Furosemide",
+  "text_uk": "Кажуть, назва «Лазикс» походить від «lasts six (hours)» — «діє шість годин», типова тривалість дії фуросеміду.",
+  "text_pl": "Mówi się, że nazwa Lasix pochodzi od „lasts six (hours)” — „działa sześć godzin”, typowy czas działania furosemidu."
  },
  {
   "drug": "lisinopril",
   "text": "ACE inhibitors like lisinopril trace back to the venom of a Brazilian pit viper, Bothrops jararaca.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/ACE_inhibitor"
+  "url": "https://en.wikipedia.org/wiki/ACE_inhibitor",
+  "text_uk": "Інгібітори АПФ, як-от лізиноприл, ведуть родовід від отрути бразильської змії — ботропса (Bothrops jararaca).",
+  "text_pl": "Inhibitory ACE, jak lizynopryl, wywodzą się z jadu brazylijskiego węża, żararaki (Bothrops jararaca)."
  },
  {
   "drug": "losartan",
   "text": "Losartan was the first angiotensin II receptor blocker (ARB), approved in the mid-1990s.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Losartan"
+  "url": "https://en.wikipedia.org/wiki/Losartan",
+  "text_uk": "Лозартан став першим блокатором рецепторів ангіотензину II (сартаном), схваленим у середині 1990-х.",
+  "text_pl": "Losartan był pierwszym antagonistą receptora angiotensyny II (sartanem), zatwierdzonym w połowie lat 90."
  },
  {
   "drug": "metoprolol",
   "text": "Beta-blockers like metoprolol exist thanks to Sir James Black, who received the 1988 Nobel Prize partly for inventing this drug class.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/James_Black_(pharmacologist)"
+  "url": "https://en.wikipedia.org/wiki/James_Black_(pharmacologist)",
+  "text_uk": "Бета-блокатори, як-от метопролол, існують завдяки серу Джеймсу Блеку, який отримав Нобелівську премію 1988 року почасти за винахід цього класу ліків.",
+  "text_pl": "Beta-blokery, jak metoprolol, istnieją dzięki sir Jamesowi Blackowi, który otrzymał Nagrodę Nobla w 1988 roku m.in. za wynalezienie tej klasy leków."
  },
  {
   "drug": "carvedilol",
   "text": "Carvedilol blocks two kinds of receptors, both beta and alpha, which widens blood vessels as well as slowing the heart.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Carvedilol"
+  "url": "https://en.wikipedia.org/wiki/Carvedilol",
+  "text_uk": "Карведилол блокує два типи рецепторів — і бета, і альфа, тож не лише сповільнює серце, а й розширює судини.",
+  "text_pl": "Karwedylol blokuje dwa rodzaje receptorów, beta i alfa, więc nie tylko spowalnia serce, ale też rozszerza naczynia."
  },
  {
   "drug": "doxycycline",
   "text": "Doxycycline belongs to the tetracyclines, antibiotics first found in Streptomyces, bacteria that live in soil.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Tetracycline_antibiotics"
+  "url": "https://en.wikipedia.org/wiki/Tetracycline_antibiotics",
+  "text_uk": "Доксициклін належить до тетрациклінів — антибіотиків, уперше знайдених у Streptomyces, ґрунтових бактеріях.",
+  "text_pl": "Doksycyklina należy do tetracyklin, antybiotyków odkrytych po raz pierwszy w Streptomyces, bakteriach żyjących w glebie."
  },
  {
   "drug": "methotrexate",
   "text": "Methotrexate is a double-duty drug: high doses treat some cancers, while low weekly doses calm rheumatoid arthritis.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Methotrexate"
+  "url": "https://en.wikipedia.org/wiki/Methotrexate",
+  "text_uk": "Метотрексат працює на два фронти: великі дози лікують деякі види раку, а малі щотижневі — заспокоюють ревматоїдний артрит.",
+  "text_pl": "Metotreksat działa na dwa fronty: wysokie dawki leczą niektóre nowotwory, a niskie cotygodniowe łagodzą reumatoidalne zapalenie stawów."
  },
  {
   "drug": "apixaban",
   "text": "Unlike warfarin, apixaban blocks a single clotting protein (factor Xa) and doesn't need routine INR blood tests.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Apixaban"
+  "url": "https://en.wikipedia.org/wiki/Apixaban",
+  "text_uk": "На відміну від варфарину, апіксабан блокує лише один білок згортання (фактор Xa) і не потребує регулярних аналізів МНВ.",
+  "text_pl": "W przeciwieństwie do warfaryny apiksaban blokuje tylko jedno białko krzepnięcia (czynnik Xa) i nie wymaga regularnych badań INR."
  },
  {
   "drug": "fluoxetine",
   "text": "Fluoxetine (Prozac) reached the US market in 1988 and became one of the most famous medicines of its era.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Fluoxetine"
+  "url": "https://en.wikipedia.org/wiki/Fluoxetine",
+  "text_uk": "Флуоксетин (Прозак) вийшов на ринок США 1988 року й став одним із найвідоміших ліків своєї епохи.",
+  "text_pl": "Fluoksetyna (Prozac) trafiła na rynek USA w 1988 roku i stała się jednym z najsłynniejszych leków swojej epoki."
  },
  {
   "drug": "sitagliptin",
   "text": "Sitagliptin was the first DPP-4 inhibitor. It boosts gut hormones that tell the pancreas to release insulin after meals.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Sitagliptin"
+  "url": "https://en.wikipedia.org/wiki/Sitagliptin",
+  "text_uk": "Ситагліптин став першим інгібітором ДПП-4. Він підсилює кишкові гормони, які кажуть підшлунковій виділити інсулін після їжі.",
+  "text_pl": "Sitagliptyna była pierwszym inhibitorem DPP-4. Wzmacnia hormony jelitowe, które każą trzustce uwolnić insulinę po posiłku."
  },
  {
   "drug": "tamsulosin",
   "text": "Tamsulosin relaxes the smooth muscle around the prostate, which makes it easier to pass urine.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Tamsulosin"
+  "url": "https://en.wikipedia.org/wiki/Tamsulosin",
+  "text_uk": "Тамсулозин розслабляє гладкі м'язи навколо простати, і сечовипускання стає легшим.",
+  "text_pl": "Tamsulosyna rozluźnia mięśnie gładkie wokół prostaty, co ułatwia oddawanie moczu."
  },
  {
   "drug": "levothyroxine",
   "text": "Levothyroxine is a lab-made copy of thyroxine (T4), the hormone your thyroid gland produces naturally.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Levothyroxine"
+  "url": "https://en.wikipedia.org/wiki/Levothyroxine",
+  "text_uk": "Левотироксин — це лабораторна копія тироксину (Т4), гормону, який природно виробляє щитоподібна залоза.",
+  "text_pl": "Lewotyroksyna to laboratoryjna kopia tyroksyny (T4), hormonu naturalnie wytwarzanego przez tarczycę."
  },
  {
   "drug": "zolpidem",
   "text": "Zolpidem is one of the “Z-drugs”, a group of sleep medicines whose names happen to start with Z.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Z-drug"
+  "url": "https://en.wikipedia.org/wiki/Z-drug",
+  "text_uk": "Золпідем належить до «Z-препаратів» — групи снодійних, назви яких просто починаються на Z.",
+  "text_pl": "Zolpidem należy do „leków Z”, grupy leków nasennych, których nazwy po prostu zaczynają się na Z."
  },
  {
   "drug": "montelukast",
   "text": "Montelukast works by blocking leukotrienes, inflammatory messengers that tighten the airways in asthma.",
   "source": "Wikipedia",
-  "url": "https://en.wikipedia.org/wiki/Montelukast"
+  "url": "https://en.wikipedia.org/wiki/Montelukast",
+  "text_uk": "Монтелукаст блокує лейкотрієни — запальні сигнальні молекули, які звужують дихальні шляхи при астмі.",
+  "text_pl": "Montelukast blokuje leukotrieny, zapalne cząsteczki sygnałowe, które zwężają drogi oddechowe w astmie."
  }
 ]
