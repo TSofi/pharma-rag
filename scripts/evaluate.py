@@ -44,7 +44,7 @@ def main():
         if not args.retrieval_only:
             res = rag.ask(it["question"])
             row.update(answer=res["answer"], refused=not res["found"],
-                       cited=sum(s["cited"] for s in res["sources"]))
+                       cited=sum(s["cited"] for s in res["sources"]), timings=res.get("timings", {}))
             time.sleep(args.sleep)
         rows.append(row)
         flag = {True: "HIT ", False: "MISS", None: "  - "}[hit]
@@ -62,6 +62,12 @@ def main():
         with_cite = sum(r["cited"] > 0 for r in answered)
         lines += [f"- Refusal accuracy: **{refusal_ok}/{len(rows)}**",
                   f"- Answers with at least one citation: **{with_cite}/{len(answered)}**"]
+        totals = sorted(r["timings"].get("total_ms", 0) for r in rows)
+        pct = lambda p: totals[min(len(totals) - 1, int(p / 100 * len(totals)))] / 1000  # noqa: E731
+        stage = lambda k: sum(r["timings"].get(k, 0) for r in rows) / len(rows) / 1000  # noqa: E731
+        lines += [f"- Latency: **p50 {pct(50):.1f}s · p95 {pct(95):.1f}s** "
+                  f"(avg per stage: embed {stage('embed_ms'):.2f}s, vector search {stage('vector_search_ms'):.2f}s, "
+                  f"LLM {stage('llm_ms'):.1f}s, translate {stage('translate_ms'):.1f}s, refusal {stage('refusal_ms'):.1f}s)"]
     lines += ["", "| # | Type | Question | Retrieval | Top-3 retrieved (drug · section · score) |"
               + ("" if args.retrieval_only else " Answer | Refused (expected) | Manual verdict |"),
               "|---|---|---|---|---|" + ("" if args.retrieval_only else "---|---|---|")]

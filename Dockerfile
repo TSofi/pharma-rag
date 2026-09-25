@@ -1,4 +1,4 @@
-# Container for the API + frontend. Used by Hugging Face Spaces (Docker SDK).
+# Container for the API + frontend. Deployed on Render (also works on any Docker host).
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -15,7 +15,7 @@ COPY app ./app
 COPY frontend ./frontend
 COPY data ./data
 
-# HF Spaces runs containers as a non-root user and expects port 7860.
 RUN chmod -R a+rX /app
+# Hosting platforms tell the app which port to use via $PORT (Render: 10000). Default 7860 locally.
 EXPOSE 7860
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]

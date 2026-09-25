@@ -18,23 +18,37 @@ def _with_retries(fn, attempts: int = 4):
             time.sleep(2 ** i)
 
 
+_thinking_supported: dict[str, bool] = {}
+
+
 def _gemini(model: str, system: str, user: str) -> str:
     from google import genai
     from google.genai import types
 
-    client = genai.Client(api_key=config.GEMINI_API_KEY)
-    resp = client.models.generate_content(
-        model=model,
-        contents=user,
-        config=types.GenerateContentConfig(system_instruction=system, temperature=0, max_output_tokens=2048),
-    )
+    client = genai.Client(api_key=config.GEMINI_API_KEY,
+                          http_options=types.HttpOptions(timeout=int(config.LLM_TIMEOUT_S * 1000)))
+    cfg = dict(system_instruction=system, temperature=0, max_output_tokens=2048)
+    if _thinking_supported.get(model, True) and config.GEMINI_THINKING:
+        cfg["thinking_config"] = types.ThinkingConfig(thinking_level=config.GEMINI_THINKING)
+    try:
+        resp = client.models.generate_content(model=model, contents=user,
+                                              config=types.GenerateContentConfig(**cfg))
+    except Exception as e:  # noqa: BLE001
+        # Some (older/lite) models don't accept a thinking level: remember that and retry without it.
+        if "thinking" in str(e).lower() and "thinking_config" in cfg:
+            _thinking_supported[model] = False
+            cfg.pop("thinking_config")
+            resp = client.models.generate_content(model=model, contents=user,
+                                                  config=types.GenerateContentConfig(**cfg))
+        else:
+            raise
     return resp.text or ""
 
 
 def _anthropic(system: str, user: str) -> str:
     import anthropic
 
-    client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+    client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY, timeout=config.LLM_TIMEOUT_S)
     msg = client.messages.create(
         model=config.ANTHROPIC_MODEL,
         max_tokens=800,

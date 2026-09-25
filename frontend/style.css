@@ -252,3 +252,6 @@ body { background: var(--bg); }
 
 .answer-body.playful { font-family: var(--serif); font-size: 20px; }
 .answer-body.playful p::before { content: "🙃 "; }
+
+.meta.timing { margin-top: 2px; font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
+.meta.timing:empty { display: none; }

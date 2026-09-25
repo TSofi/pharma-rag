@@ -59,7 +59,7 @@ def test_giant_sentence_is_hard_split():
 def mocked_pipeline(monkeypatch):
     chunk = {"drug": "metformin", "section": "Indications and Usage", "text": "Metformin is indicated...",
              "url": "u", "score": 0.9, "effective_time": "20251101"}
-    monkeypatch.setattr(rag.store, "search", lambda q, top_k, drugs=None: [chunk, {**chunk, "score": 0.2}])
+    monkeypatch.setattr(rag.store, "search", lambda q, top_k, drugs=None, timings=None: [chunk, {**chunk, "score": 0.2}])
     calls = {}
 
     def fake_llm(system, user):
@@ -137,3 +137,9 @@ def test_facts_are_translated():
     for f in rag._facts():
         assert f.get("text_uk") and f.get("text_pl")
     assert re.search("[а-яіїє]", rag.random_fact(lang="uk")["text"])
+
+
+def test_response_includes_stage_timings(mocked_pipeline):
+    res = rag.ask("What is metformin used for?")
+    assert {"llm_ms", "total_ms"} <= res["timings"].keys()
+    assert res["timings"]["total_ms"] >= res["timings"]["llm_ms"]

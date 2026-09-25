@@ -3,6 +3,7 @@ import difflib
 import json
 import random
 import re
+import time
 from functools import lru_cache
 
 from . import config, llm, store
@@ -169,21 +170,37 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
     if market not in MARKETS:
         raise ValueError(f"Market '{market}' is not available yet")
     top_k = top_k or config.TOP_K
+    t_start = time.perf_counter()
+    timings: dict[str, int] = {}
+
+    def timed(name: str, fn):
+        """Run fn() and add its duration (ms) to timings[name] -- a tiny per-stage profiler."""
+        t = time.perf_counter()
+        try:
+            return fn()
+        finally:
+            timings[name] = timings.get(name, 0) + round((time.perf_counter() - t) * 1000)
     lang = detect_language(question)                                   # language of the QUESTION
     out_lang = lang if answer_language == "auto" else answer_language  # language of the ANSWER
 
     # 0) QUERY REWRITING: the labels and the embedding model are English, so a Ukrainian/Polish
     #    question is translated first. The answer is still written in the user's language.
-    search_q = question if lang == "en" else llm.generate(TRANSLATE_PROMPT, question).strip() or question
+    search_q = question if lang == "en" else \
+        timed("translate_ms", lambda: llm.generate(TRANSLATE_PROMPT, question)).strip() or question
     drugs, corrections = detect_drugs_fuzzy(search_q)
     base = {"detected_drugs": drugs, "corrections": corrections, "language": lang, "answer_language": out_lang,
             "market": market, "search_query": search_q if lang != "en" else None}
+    def finish(result: dict) -> dict:
+        timings["total_ms"] = round((time.perf_counter() - t_start) * 1000)
+        print(json.dumps({"event": "ask", "lang": lang, "found": result["found"], **timings}), flush=True)
+        return {**result, "timings": timings}
+
     def not_found() -> dict:
-        text, playful = refusal(question, out_lang)
-        return {**base, "answer": text, "found": False, "playful": playful, "sources": []}
+        text, playful = timed("refusal_ms", lambda: refusal(question, out_lang))
+        return finish({**base, "answer": text, "found": False, "playful": playful, "sources": []})
 
     # 1) RETRIEVE
-    chunks = store.search(search_q, top_k=top_k, drugs=drugs or None)
+    chunks = store.search(search_q, top_k=top_k, drugs=drugs or None, timings=timings)
     relevant = [c for c in chunks if c["score"] >= config.MIN_SCORE]
     if not relevant:
         return not_found()
@@ -194,7 +211,7 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
         if lang != "en":
             msg += f"\n(English version of the question: {search_q})"
         msg += f"\n\nWrite the answer in {LANGUAGES[language]}."
-        return llm.generate(SYSTEM_PROMPT, msg).strip()
+        return timed("llm_ms", lambda: llm.generate(SYSTEM_PROMPT, msg)).strip()
 
     answer = generate(out_lang)
     if (not answer or "NOT_FOUND" in answer) and out_lang != "en":
@@ -202,7 +219,8 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
         # answer in English (same language as the sources), then translate that answer.
         english = generate("en")
         if english and "NOT_FOUND" not in english:
-            answer = llm.generate(TRANSLATE_ANSWER_PROMPT.format(language=LANGUAGES[out_lang]), english).strip()
+            answer = timed("llm_ms", lambda: llm.generate(
+                TRANSLATE_ANSWER_PROMPT.format(language=LANGUAGES[out_lang]), english)).strip()
 
     if not answer or "NOT_FOUND" in answer:
         return not_found()
@@ -216,4 +234,4 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
          "brands": drug_brands().get(c["drug"], []), "cited": i in cited}
         for i, c in enumerate(relevant, start=1)
     ]
-    return {**base, "answer": answer, "found": True, "sources": sources, "model": llm.last_model_used}
+    return finish({**base, "answer": answer, "found": True, "sources": sources, "model": llm.last_model_used})

@@ -70,6 +70,7 @@ async function ask(question) {
   btn.disabled = true;
   $("#detected").innerHTML = "";
   $("#meta").textContent = t("searching");
+  $("#timing").textContent = "";
   $("#notice").hidden = true;
   document.querySelector(".sources-head").hidden = true;
   answerEl.className = "answer-body";
@@ -97,6 +98,18 @@ async function ask(question) {
       ? t("metaFound", { cited, total: data.sources.length, secs: ((performance.now() - t0) / 1000).toFixed(1) }) +
         (dates.length ? " · " + t("metaVersions", { dates: dates.join(", ") }) : "") + (data.model ? ` · ${data.model}` : "")
       : data.playful ? t("metaPlayful") : t("metaNone")) + (score ? " · " + t("metaScore", { n: score }) : "");
+
+    // Latency breakdown: where did the time go? (retrieval vs LLM vs cold start / network)
+    const tm = data.timings || {};
+    if (tm.total_ms != null) {
+      const sec = (ms) => (ms / 1000).toFixed(1);
+      const clientMs = performance.now() - t0;
+      $("#timing").textContent = t("timing", {
+        r: sec((tm.embed_ms || 0) + (tm.vector_search_ms || 0)),
+        l: sec((tm.translate_ms || 0) + (tm.llm_ms || 0) + (tm.refusal_ms || 0)),
+        w: sec(Math.max(0, clientMs - tm.total_ms)),
+      });
+    }
 
     // Transparency: show how the question was interpreted (typo fixes, translation).
     const notes = [];

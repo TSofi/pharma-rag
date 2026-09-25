@@ -13,6 +13,10 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()  # "gemini" | "anthro
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 # Optional comma-separated backup models, used if the main one keeps failing (e.g. overloaded).
+# How much the model "thinks" before answering: minimal | low | medium | high. Grounded Q&A over
+# provided sources doesn't need deep reasoning, and thinking is the biggest source of latency.
+GEMINI_THINKING = os.getenv("GEMINI_THINKING", "low").upper()
+LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "30"))  # per LLM call; avoids 2-minute hangs
 GEMINI_FALLBACK_MODELS = [m.strip() for m in os.getenv("GEMINI_FALLBACK_MODELS", "").split(",") if m.strip()]
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")

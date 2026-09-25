@@ -5,6 +5,7 @@
 - Qdrant: stores the vectors together with a "payload" (drug name, section, source URL,
   original text) and finds the vectors closest to a query vector (cosine similarity).
 """
+import time
 from functools import lru_cache
 
 from fastembed import TextEmbedding
@@ -56,13 +57,18 @@ def upsert(ids: list[int], vectors: list[list[float]], payloads: list[dict]) -> 
     )
 
 
-def search(query: str, top_k: int, drugs: list[str] | None = None) -> list[dict]:
-    """Return the top_k most similar chunks. If `drugs` is given, only search those drugs."""
+def search(query: str, top_k: int, drugs: list[str] | None = None, timings: dict | None = None) -> list[dict]:
+    """Return the top_k most similar chunks. If `drugs` is given, only search those drugs.
+    If a `timings` dict is passed, embedding and vector-search durations (ms) are recorded in it."""
+    t0 = time.perf_counter()
+    vector = embed_query(query)
+    t1 = time.perf_counter()
     flt = None
     if drugs:
         flt = models.Filter(must=[models.FieldCondition(key="drug", match=models.MatchAny(any=drugs))])
-    res = get_client().query_points(
-        config.COLLECTION, query=embed_query(query), limit=top_k, query_filter=flt, with_payload=True
-    )
+    res = get_client().query_points(config.COLLECTION, query=vector, limit=top_k, query_filter=flt, with_payload=True)
+    if timings is not None:
+        timings["embed_ms"] = round((t1 - t0) * 1000)
+        timings["vector_search_ms"] = round((time.perf_counter() - t1) * 1000)
     return [{**p.payload, "score": round(p.score, 3)} for p in res.points]
 

@@ -15,7 +15,25 @@ from pydantic import BaseModel, Field
 
 from . import config, rag
 
-app = FastAPI(title="PharmaRAG", description="Drug-label Q&A with traceable sources", version="1.0")
+from contextlib import asynccontextmanager
+
+from . import store
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    # Warm-up: load the embedding model and open the Qdrant connection at startup,
+    # so the FIRST user question doesn't pay for it (a few seconds on a small CPU).
+    try:
+        store.embed_query("warm up")
+        store.get_client()
+    except Exception as e:  # noqa: BLE001 -- never block startup on warm-up
+        print(f"warm-up skipped: {e}", flush=True)
+    yield
+
+
+app = FastAPI(title="PharmaRAG", description="Drug-label Q&A with traceable sources", version="1.0",
+              lifespan=lifespan)
 
 # CORS lets the browser call this API from another domain (the Vercel frontend).
 app.add_middleware(

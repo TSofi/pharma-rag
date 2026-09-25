@@ -1,5 +1,9 @@
 // Where the backend API lives.
-// ""  -> same origin (when FastAPI serves this page locally or on Hugging Face).
-// For the Vercel deployment, put your Hugging Face Space URL here, e.g.
-// window.API_BASE = "https://your-name-pharma-rag.hf.space";
-window.API_BASE = "";
+// - Served by FastAPI itself (localhost or Render): same origin -> "".
+// - Served by Vercel (or anywhere else): call the Render backend.
+(() => {
+  const RENDER_API = "https://pharma-rag-smgm.onrender.com";
+  const h = location.hostname;
+  const sameOrigin = h === "localhost" || h === "127.0.0.1" || h.endsWith(".onrender.com");
+  window.API_BASE = sameOrigin ? "" : RENDER_API;
+})();
