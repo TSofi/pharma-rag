@@ -188,6 +188,10 @@ $("#libList").addEventListener("click", (e) => {
   q.focus();
 });
 
+// Wake the backend up as soon as the page opens: a free Render instance sleeps after 15 min idle
+// and needs ~50 s to start, so we start that clock while the visitor is still reading/typing.
+fetch(`${API}/api/health`).catch(() => {});
+
 fetch(`${API}/api/drugs`).then((r) => r.json()).then((d) => {
   drugs = d; $("#drugCount").textContent = d.length; renderLib();
 }).catch(() => { $("#drugCount").textContent = "offline"; });
