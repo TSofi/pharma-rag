@@ -1,112 +1,123 @@
----
-title: PharmaRAG
-emoji: 💊
-colorFrom: green
-colorTo: gray
-sdk: docker
-app_port: 7860
-pinned: false
----
+# PharmaRAG: medicine questions answered from official leaflets
 
-# PharmaRAG: drug-label Q&A with traceable sources
+Ask about a specific medicine in your language and get an answer taken **only** from the official patient
+leaflet / drug label of the country you choose. Every sentence links to the exact leaflet passage it came from.
+If the leaflets don't cover the question, PharmaRAG says so, and any general answer is clearly marked as such.
 
-Ask a question about a common drug and get a short answer written **only** from official FDA drug labels. Every sentence cites the label section it came from, with a link to the original on DailyMed. If the labels don't contain the answer, the system refuses instead of guessing.
+> Educational project, not medical advice.
 
-> Educational demo, not medical advice.
+**Live:** https://pharma-rag-nine.vercel.app · **API:** https://pharma-rag-smgm.onrender.com (Swagger at `/docs`)
 
-**Live demo:** _add Vercel URL_ · **API docs:** _add HF Space URL_/docs
+## Coverage
 
----
+| Country | Source (official open data) | Products recognised | Leaflets indexed | Chunks |
+|---|---|---|---|---|
+| Poland | Rejestr Produktów Leczniczych (URPL) + EMA | 20,265 | 2,426 | 64,742 |
+| Ukraine | Державний реєстр лікарських засобів (MOZ, CC BY 4.0) | 12,549 | 2,998 | 93,470 |
+| Czechia | SÚKL open data (DLP + PIL) | 7,595 | 1,508 | 37,179 |
+| Spain | CIMA REST API (AEMPS) | 12,634 | 2,903 | 81,452 |
+| France | Base de Données Publique des Médicaments (ANSM, Licence Ouverte) | 8,067 | 2,362 | 65,576 |
+| United States | openFDA drug labels (public domain) | 39,968 | 3,277 (~25%, most common first) | 57,440 |
+| **Total** | | **~100,000** | **~15,500** | **~400,000** |
 
-## Why this project
+Coming next (open data confirmed): Austria, Italy, Ireland, Sweden, Latvia, Estonia.
 
-Clinicians and pharmacists can't use an LLM answer they can't verify. PharmaRAG applies **Retrieval-Augmented Generation (RAG)** to a small, trustworthy corpus and makes every claim traceable:
-
-- **Grounded:** the model sees only retrieved label excerpts and must cite them as `[n]`.
-- **Traceable:** each source card shows the drug, label section, similarity score, label version date and a DailyMed link.
-- **Honest:** low-similarity retrieval or an unsupported question leads to an explicit "not found".
-- **Measured:** a hand-written evaluation set checks retrieval quality, refusals and citations. Answers are also reviewed manually for hallucinations.
-
-## Architecture
+## How it works
 
 ```mermaid
 flowchart LR
-    subgraph Ingestion [offline ingestion]
-        A[openFDA<br/>drug label API] -->|fetch_labels.py| B[labels.jsonl<br/>44 drugs, sectioned]
-        B -->|ingest.py<br/>section-aware chunking| C[chunks<br/>~900 chars + overlap]
-        C -->|fastembed<br/>BGE-small, 384-d| D[(Qdrant<br/>vector DB)]
+    subgraph Ingestion [offline, per country]
+        R[National register<br/>CSV / XML / API / ZIP] --> G[Group products by<br/>active substance + form]
+        G --> L[Download one leaflet per group<br/>PDF / HTML / MHT → text]
+        L --> S[Split by leaflet sections<br/>EU QRD · UA · FDA]
+        S --> E[Embed chunks<br/>BGE-small / multilingual MiniLM]
+        E --> Q[(Qdrant Cloud<br/>1 collection per country)]
     end
-    subgraph Query [query time]
-        U[User question] --> E{drug name<br/>detection}
-        E -->|metadata filter| D
-        U -->|embed| D
-        D -->|top-k chunks<br/>+ score threshold| F[Prompt with<br/>numbered sources]
-        F --> G[LLM<br/>Gemini / Claude]
-        G --> H["Answer with [n] citations<br/>+ source cards"]
+    subgraph Query [question time]
+        U[Question + country] --> D[Detect product names<br/>whole register, inflections]
+        U --> V[Embed question<br/>HF Inference API]
+        D -->|filter by group| Q
+        V --> Q
+        Q --> K[Hybrid re-rank<br/>vector + keywords + product preference]
+        K --> P[Prompt with numbered sources]
+        P --> M[LLM: Groq gpt-oss-120b<br/>fallback Gemini]
+        M --> A["Answer with [n] citations<br/>+ source cards"]
     end
 ```
 
-| Layer | Choice | Why |
+- **One leaflet per substance + form.** Generics copy the original's leaflet almost word for word, so the
+  ~100k products are grouped and one representative leaflet per group is indexed (original brand preferred).
+  Every product name still maps to its group. When the user asks about a product whose own leaflet isn't
+  indexed (e.g. Ibuprom), the answer uses the user's name and the UI explains which leaflet was cited
+  (e.g. Nurofen Forte, same substance and form), with a link to the asked product's own leaflet.
+- **Section-aware chunking.** EU leaflets follow the same six QRD sections in every language; Ukrainian
+  instructions and FDA labels have their own headings. ~900-character chunks with overlap, each embedded
+  with a "product · substance · section" prefix.
+- **Multilingual retrieval.** `paraphrase-multilingual-MiniLM-L12-v2` for EU/UA leaflets (a Polish question
+  finds a Czech passage), `bge-small-en-v1.5` for English FDA labels.
+- **Hybrid re-ranking.** 30 vector candidates re-scored with a stemmed keyword bonus ("alkoholem" matches
+  "alkoholu"), a preference for the product the user named, and a small penalty for children's leaflets
+  unless the question is about children.
+- **Grounded generation.** Strict citation prompt, `NOT_FOUND` refusal, invalid citations stripped,
+  model-specific citation styles normalised. Answer language is independent of question and source language.
+- **Answer modes.** Violet: sourced from leaflets. Orange: general AI info, clearly marked, no sources.
+  Red: possible emergency, fixed text with emergency numbers (never generated).
+- **Observability.** Per-stage timings (embedding, vector search, LLM, total) returned to the UI and logged.
+
+## Deployment
+
+| Part | Where | Notes |
 |---|---|---|
-| Data | openFDA Structured Product Labels | Official, public domain, already split into sections |
-| Chunking | Section-aware, sentence-packed, 900 chars / 150 overlap | A chunk never mixes e.g. *Dosage* with *Contraindications* |
-| Embeddings | `BAAI/bge-small-en-v1.5` via fastembed (ONNX, CPU) | Free, no API key, small enough for free hosting |
-| Vector DB | Qdrant (embedded locally, Qdrant Cloud in prod) | Payload filtering by drug, same client API locally and in the cloud |
-| Retrieval | Cosine top-k + drug-name metadata filter + min-score threshold | Brand names like "Eliquis" map to the generic, which cuts cross-drug noise |
-| Generation | Gemini (free tier) or Claude, `temperature=0`, strict citation prompt | Provider set in `.env` |
-| API | FastAPI (`/api/ask`, `/api/drugs`, `/api/health`, Swagger at `/docs`) | |
-| Frontend | Static HTML/CSS/JS | No build step, deploys to Vercel as-is |
-| Deploy | Docker on Hugging Face Spaces (API), Vercel (frontend) | Both free |
-
-## Evaluation
-
-`eval/questions.jsonl` has 16 questions covering indications, dosing, interactions, boxed warnings, special populations, brand-name lookups, lay wording, and questions the system **must refuse**: a drug outside the library and an off-topic question. There is also one edge case, a drug comparison that the labels don't make.
-
-```bash
-python scripts/evaluate.py --retrieval-only   # free, no LLM calls
-python scripts/evaluate.py                    # full pipeline -> eval/report.md
-```
-
-Metrics: retrieval hit@k (expected drug **and** section among the top-k), refusal accuracy, citation rate, plus a manual verdict column (correct / partial / hallucination).
-
-| Metric | Result |
-|---|---|
-| Retrieval hit@6 | _fill in_ |
-| Refusal accuracy | _fill in_ |
-| Answers with citations | _fill in_ |
-
-**Findings:** _fill in after reviewing `eval/report.md`, e.g. which question types fail and why._
+| Frontend | Vercel (static HTML/CSS/JS) | 6 UI languages, mobile layout, data-sources dialog, report form |
+| API | Render (Docker, free 512 MB) | FastAPI |
+| Vector DB | Qdrant Cloud (free 1 GB) | int8 quantized vectors in RAM, full vectors + payload on disk |
+| Question embeddings | Hugging Face Inference API | Same models as indexing (verified cosine 1.0); keeps the API under 512 MB |
+| LLM | Groq, Gemini fallback | Retries, timeouts, circuit breaker |
+| Feedback | Resend | "Report a problem" e-mails the owner; address stays server-side |
 
 ## Run locally
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate            # Windows  (macOS/Linux: source .venv/bin/activate)
-pip install -r requirements.txt
-copy .env.example .env            # then add your GEMINI_API_KEY
-python scripts/fetch_labels.py    # download labels from openFDA
-python scripts/ingest.py          # build the vector index
-uvicorn app.main:app --reload     # open http://127.0.0.1:8000
+.venv\Scripts\activate                 # macOS/Linux: source .venv/bin/activate
+pip install -r requirements-ingest.txt
+copy .env.example .env                 # add GROQ_API_KEY / GEMINI_API_KEY, QDRANT_URL + QDRANT_API_KEY
+uvicorn app.main:app --reload          # http://127.0.0.1:8000
+```
+
+Rebuilding the data (hours, mostly CPU for embeddings):
+
+```bash
+python -m scripts.probe_markets        # PL + UA register files
+python -m scripts.fetch_markets        # PL + UA leaflets
+python -m scripts.fetch_eu             # ES, FR, CZ
+python -m scripts.fetch_us             # openFDA bulk labels
+python -m scripts.ingest_markets --markets pl,ua,cz,es,fr
+python -m scripts.ingest_markets --markets us --top 3000
+python -m pytest                       # 36 tests
+python -m scripts.debug_ask pl "Czy mogę brać Ibuprom z alkoholem?"   # inspect retrieval
 ```
 
 ## Project structure
 
 ```
-app/            FastAPI app: config, embeddings + Qdrant store, LLM wrapper, RAG pipeline
-scripts/        fetch_labels.py -> ingest.py -> evaluate.py
-data/           drugs.txt (editable list), labels.jsonl (fetched labels)
-eval/           questions.jsonl, generated reports
-frontend/       static UI (served by FastAPI locally, deployed to Vercel)
-Dockerfile      image for Hugging Face Spaces
+app/        FastAPI app: config, store (embeddings + Qdrant), markets (product index), rag, llm, feedback
+scripts/    probe_*/fetch_* (per-country ETL), doc_text (PDF/HTML/MHT → sections), ingest_markets,
+            check_embed, debug_ask, evaluate
+data/       markets/<country>.json (product index, committed), raw/ (downloads, not committed)
+frontend/   static UI
+tests/      pytest suite
 ```
 
-## Limitations and next steps
+## Limitations
 
-- US FDA labels only. EU SmPCs from EMA would be the natural extension for European users.
-- One label per drug (the most complete single-ingredient label), so manufacturer differences are ignored.
-- Lexical drug detection. Misspellings like "metfromin" won't trigger the filter.
-- Next steps: hybrid search (BM25 + dense), a reranker, and an LLM-as-judge faithfulness check alongside the manual review.
+- One leaflet per substance + form: small differences between generics (excipients, strengths) are not captured.
+- US: ~25% of label groups indexed so far (the most common drugs).
+- EMA leaflets are included only for Poland; EMA blocks bulk downloads, so CZ/ES/FR rely on national registers.
+- Scanned PDFs without a text layer are skipped.
 
 ## Data and license
 
-Drug labels come from [openFDA](https://open.fda.gov/), which is public domain. This is not an FDA product and is not endorsed by the FDA. Code is MIT-licensed.
+Data comes from official public registers: openFDA (public domain), URPL/e-Zdrowie, MOZ Ukraine (CC BY 4.0),
+SÚKL open data, AEMPS CIMA, ANSM BDPM (Licence Ouverte / Etalab 2.0), EMA. This project is not affiliated with
+or endorsed by any of these agencies. Code is MIT-licensed.

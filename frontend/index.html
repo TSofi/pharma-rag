@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=22" />
+  <link rel="stylesheet" href="style.css?v=23" />
 </head>
 <body>
   <div class="lava" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -33,20 +33,19 @@
       <label class="ctl">
         <span data-i18n="market">Country</span>
         <select id="market">
-          <option value="us" selected data-i18n="mkt_us">United States · FDA (3,000 most common)</option>
+          <option value="ua" selected data-i18n="mkt_ua">Ukraine · State Register (MOZ)</option>
+          <option value="pl" data-i18n="mkt_pl">Poland · URPL + EMA</option>
           <option value="cz" data-i18n="mkt_cz">Czechia · SÚKL</option>
           <option value="es" data-i18n="mkt_es">Spain · AEMPS (CIMA)</option>
           <option value="fr" data-i18n="mkt_fr">France · ANSM (BDPM)</option>
-          <option value="pl" data-i18n="mkt_pl">Poland · URPL + EMA</option>
-          <option value="ua" data-i18n="mkt_ua">Ukraine · State Register (MOZ)</option>
-          <optgroup label="Coming soon" data-i18n-label="soon">
-            <option value="at" disabled data-i18n="mkt_at">Austria · BASG</option>
-            <option value="it" disabled data-i18n="mkt_it">Italy · AIFA</option>
-            <option value="ie" disabled data-i18n="mkt_ie">Ireland · HPRA</option>
-            <option value="se" disabled data-i18n="mkt_se">Sweden · Läkemedelsverket</option>
-            <option value="lv" disabled data-i18n="mkt_lv">Latvia · ZVA</option>
-            <option value="ee" disabled data-i18n="mkt_ee">Estonia · Ravimiamet</option>
-          </optgroup>
+          <option value="us" data-i18n="mkt_us">United States · FDA (3,000 most common)</option>
+          <option disabled class="opt-head" data-i18n="soonHead">── Coming soon ──</option>
+          <option value="at" disabled class="opt-soon" data-i18n="mkt_at">Austria · BASG</option>
+          <option value="it" disabled class="opt-soon" data-i18n="mkt_it">Italy · AIFA</option>
+          <option value="ie" disabled class="opt-soon" data-i18n="mkt_ie">Ireland · HPRA</option>
+          <option value="se" disabled class="opt-soon" data-i18n="mkt_se">Sweden · Läkemedelsverket</option>
+          <option value="lv" disabled class="opt-soon" data-i18n="mkt_lv">Latvia · ZVA</option>
+          <option value="ee" disabled class="opt-soon" data-i18n="mkt_ee">Estonia · Ravimiamet</option>
         </select>
       </label>
       <label class="ctl">
@@ -113,20 +112,19 @@
       <label class="ctl ctl-block">
         <span data-i18n="market">Country</span>
         <select id="libMarket">
-            <option value="us" selected data-i18n="mkt_us">United States · FDA (3,000 most common)</option>
+            <option value="ua" selected data-i18n="mkt_ua">Ukraine · State Register (MOZ)</option>
+            <option value="pl" data-i18n="mkt_pl">Poland · URPL + EMA</option>
             <option value="cz" data-i18n="mkt_cz">Czechia · SÚKL</option>
-          <option value="es" data-i18n="mkt_es">Spain · AEMPS (CIMA)</option>
-          <option value="fr" data-i18n="mkt_fr">France · ANSM (BDPM)</option>
-          <option value="pl" data-i18n="mkt_pl">Poland · URPL + EMA</option>
-            <option value="ua" data-i18n="mkt_ua">Ukraine · State Register (MOZ)</option>
-          <optgroup label="Coming soon" data-i18n-label="soon">
-            <option value="at" disabled data-i18n="mkt_at">Austria · BASG</option>
-            <option value="it" disabled data-i18n="mkt_it">Italy · AIFA</option>
-            <option value="ie" disabled data-i18n="mkt_ie">Ireland · HPRA</option>
-            <option value="se" disabled data-i18n="mkt_se">Sweden · Läkemedelsverket</option>
-            <option value="lv" disabled data-i18n="mkt_lv">Latvia · ZVA</option>
-            <option value="ee" disabled data-i18n="mkt_ee">Estonia · Ravimiamet</option>
-          </optgroup>
+            <option value="es" data-i18n="mkt_es">Spain · AEMPS (CIMA)</option>
+            <option value="fr" data-i18n="mkt_fr">France · ANSM (BDPM)</option>
+            <option value="us" data-i18n="mkt_us">United States · FDA (3,000 most common)</option>
+            <option disabled class="opt-head" data-i18n="soonHead">── Coming soon ──</option>
+            <option value="at" disabled class="opt-soon" data-i18n="mkt_at">Austria · BASG</option>
+            <option value="it" disabled class="opt-soon" data-i18n="mkt_it">Italy · AIFA</option>
+            <option value="ie" disabled class="opt-soon" data-i18n="mkt_ie">Ireland · HPRA</option>
+            <option value="se" disabled class="opt-soon" data-i18n="mkt_se">Sweden · Läkemedelsverket</option>
+            <option value="lv" disabled class="opt-soon" data-i18n="mkt_lv">Latvia · ZVA</option>
+            <option value="ee" disabled class="opt-soon" data-i18n="mkt_ee">Estonia · Ravimiamet</option>
         </select>
       </label>
       <p class="muted" id="libNote" data-i18n="libNote">Official FDA labels indexed in the vector database. Click one to ask about it.</p>
@@ -178,10 +176,10 @@
     <p class="muted"><button type="button" class="linkish" id="dataBtn" data-i18n="dataSources">Data sources</button> · <button type="button" class="linkish" id="reportBtn" data-i18n="report">Report a problem</button> · Retrieval: Qdrant + multilingual embeddings · Generation: LLM with citation constraints</p>
   </footer>
 
-  <script src="config.js?v=22"></script>
-  <script src="i18n.js?v=22"></script>
-  <script src="game.js?v=22"></script>
-  <script src="waiting.js?v=22"></script>
-  <script src="app.js?v=22"></script>
+  <script src="config.js?v=23"></script>
+  <script src="i18n.js?v=23"></script>
+  <script src="game.js?v=23"></script>
+  <script src="waiting.js?v=23"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>

@@ -74,7 +74,12 @@ EMERGENCY = {
           "Nie czekaj na odpowiedź online.",
 }
 _PL_WORDS = {"jest", "czy", "jaka", "jaki", "jakie", "dawka", "dawkowanie", "lek", "leku", "można", "mozna",
-             "się", "sie", "na", "przy", "ciąży", "ciazy", "skutki", "uboczne", "działa", "dla", "przeciwwskazania"}
+             "się", "sie", "na", "przy", "ciąży", "ciazy", "skutki", "uboczne", "działa", "dziala", "dla",
+             "przeciwwskazania", "dlaczego", "stosuje", "stosowac", "moge", "brac", "jak", "ile", "kiedy", "czym",
+             "mam", "dziecko", "dzieci", "tabletki", "tabletke", "po", "ze", "bez", "razem", "leki", "lekow"}
+# Common English words: without any of them, "en" is only a guess (e.g. Polish typed without ą, ę, ł).
+_EN_WORDS = {"the", "is", "can", "what", "how", "with", "for", "of", "and", "i", "my", "do", "does", "take",
+             "are", "it", "to", "in", "on", "while", "when", "should", "side", "effects", "during", "pregnancy"}
 
 NOT_FOUND_MSG = NOT_FOUND["en"]
 
@@ -98,7 +103,11 @@ def detect_language(text: str) -> str:
         return "es"
     if re.search(r"[àâçèêëîïôœùû]", low) or len(words & _FR_WORDS) >= 2:
         return "fr"
-    return "en"
+    return "en" if words & _EN_WORDS else "auto"  # "auto": let the LLM answer in the question's own language
+
+
+def lang_name(code: str) -> str:
+    return LANGUAGES.get(code, "the same language as the user's question")
 
 
 @lru_cache(maxsize=1)
@@ -251,8 +260,8 @@ def fallback(question: str, out_lang: str) -> tuple[str, str]:
     "emergency" - a fixed, serious message (never generated, never a joke);
     "none"      - the plain "not found" message."""
     try:
-        reply = llm.generate(TRIAGE_PROMPT.format(language=LANGUAGES[out_lang]),
-                             f"Question: {question}\n\nWrite any answer in {LANGUAGES[out_lang]} "
+        reply = llm.generate(TRIAGE_PROMPT.format(language=lang_name(out_lang)),
+                             f"Question: {question}\n\nWrite any answer in {lang_name(out_lang)} "
                              f"(regardless of the question's language).").strip()
     except Exception:  # noqa: BLE001 -- the fallback is optional; never fail the request because of it
         return NOT_FOUND.get(out_lang, NOT_FOUND["en"]), "none"
@@ -346,17 +355,17 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
             msg += f"\n(English version of the question: {search_q})"
         for e in equivalents:
             msg += SAME_SUBSTANCE_NOTE.format(asked=e["asked"], reps=", ".join(e["reps"]), inn=e["inn"])
-        msg += f"\n\nWrite the answer in {LANGUAGES[language]}."
+        msg += f"\n\nWrite the answer in {lang_name(language)}."
         return timed("llm_ms", lambda: llm.generate(SYSTEM_PROMPT, msg)).strip()
 
     answer = generate(out_lang)
-    if (not answer or "NOT_FOUND" in answer) and out_lang != "en":
+    if (not answer or "NOT_FOUND" in answer) and out_lang not in ("en", "auto"):
         # Some (smaller) models refuse when answer language != source language. Fall back to:
         # answer in English (same language as the sources), then translate that answer.
         english = generate("en")
         if english and "NOT_FOUND" not in english:
             answer = timed("llm_ms", lambda: llm.generate(
-                TRANSLATE_ANSWER_PROMPT.format(language=LANGUAGES[out_lang]), english)).strip()
+                TRANSLATE_ANSWER_PROMPT.format(language=lang_name(out_lang)), english)).strip()
 
     if not answer or "NOT_FOUND" in answer:
         return not_found()

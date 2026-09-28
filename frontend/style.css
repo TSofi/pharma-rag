@@ -303,3 +303,8 @@ body { background: var(--bg); }
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .report-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
 .report-foot p { margin: 0; font-size: 13px; }
+
+/* country list: grey, non-selectable "coming soon" block with a readable divider (no white optgroup bar) */
+.ctl select option.opt-head { color: var(--muted); font-size: 12px; letter-spacing: .06em; background: var(--surface); }
+.ctl select option.opt-soon { color: var(--muted); background: var(--surface); }
+.ctl select option:disabled { color: var(--muted); }
