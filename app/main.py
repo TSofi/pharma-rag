@@ -26,8 +26,11 @@ async def lifespan(_app):
     # so the FIRST user question doesn't pay for it (a few seconds on a small CPU).
     try:
         store.get_client()
-        # Warm up the multilingual model (used by 5 of the 6 markets); the English one loads on first US question.
-        store.embed_query("warm up", config.MULTI_EMBED_MODEL)
+        # Warm up whichever model runs locally (a model served by the embedding API needs no RAM here).
+        local = [m for m in (config.MULTI_EMBED_MODEL, config.EMBED_MODEL)
+                 if not (m in config.REMOTE_EMBED_MODELS and config.HF_TOKEN)]
+        if local:
+            store.embed_query("warm up", local[0])
         for m in config.MARKETS:
             rag.markets.index(m)  # load the product indexes (~1 s) before the first question
     except Exception as e:  # noqa: BLE001 -- never block startup on warm-up

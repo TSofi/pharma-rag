@@ -41,7 +41,32 @@ def embed_passages(texts: list[str], model: str | None = None) -> list[list[floa
     return [v.tolist() for v in get_embedder(model).passage_embed(texts)]
 
 
+HF_URL = "https://router.huggingface.co/hf-inference/models/{model}/pipeline/feature-extraction"
+
+
+def remote_embed(texts: list[str], model: str) -> list[list[float]]:
+    """Same model, run by Hugging Face's Inference API instead of in our RAM. The free server has 512 MB and
+    the multilingual model alone needs ~400 MB, so in production question embeddings come from here."""
+    import httpx
+    import numpy as np
+
+    r = httpx.post(HF_URL.format(model=model), json={"inputs": texts, "options": {"wait_for_model": True}},
+                   headers={"Authorization": f"Bearer {config.HF_TOKEN}"}, timeout=30)
+    if r.status_code >= 400:
+        raise RuntimeError(f"embedding API {r.status_code}: {r.text[:200]}")
+    out = []
+    for v in r.json():
+        a = np.asarray(v, dtype=np.float32)
+        if a.ndim == 2:  # token vectors -> mean pooling (what sentence-transformers does)
+            a = a.mean(axis=0)
+        out.append((a / (np.linalg.norm(a) or 1)).tolist())
+    return out
+
+
 def embed_query(text: str, model: str | None = None) -> list[float]:
+    model = model or config.EMBED_MODEL
+    if model in config.REMOTE_EMBED_MODELS and config.HF_TOKEN:
+        return remote_embed([text], model)[0]
     # Queries and passages are embedded slightly differently for BGE models.
     return next(iter(get_embedder(model).query_embed(text))).tolist()
 
