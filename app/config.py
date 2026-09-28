@@ -30,6 +30,9 @@ ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-small-en-v1.5")  # 384-dim, English (US labels)
 # Polish / Ukrainian leaflets need a multilingual model; it also lets a question in one language
 # match a leaflet written in another (e.g. a Ukrainian question over Polish leaflets).
+# How many embedding models to keep loaded at once (1 on the free 512 MB server, 2 if RAM allows).
+MAX_MODELS_IN_MEMORY = int(os.getenv("MAX_MODELS_IN_MEMORY", "1"))
+EMBED_THREADS = int(os.getenv("EMBED_THREADS", "0"))  # 0 = let ONNX Runtime decide
 MULTI_EMBED_MODEL = os.getenv("MULTI_EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 # --- Vector database (Qdrant) ----------------------------------------------

@@ -7,6 +7,7 @@
   original text) and finds the vectors closest to a query vector (cosine similarity).
   One collection per market (US, PL, UA).
 """
+import gc
 import time
 from functools import lru_cache
 
@@ -16,10 +17,24 @@ from qdrant_client import QdrantClient, models
 from . import config
 
 
-@lru_cache(maxsize=2)
+_embedders: dict[str, TextEmbedding] = {}
+
+
 def get_embedder(model: str | None = None) -> TextEmbedding:
-    # Downloaded once and cached; lru_cache keeps one instance per model in memory.
-    return TextEmbedding(model_name=model or config.EMBED_MODEL)
+    """Load an embedding model once and keep it. On a small server (512 MB) only MAX_MODELS_IN_MEMORY
+    models are kept: switching from the US (English model) to Poland (multilingual) swaps them,
+    which costs ~1-2 s once instead of running out of memory."""
+    model = model or config.EMBED_MODEL
+    if model not in _embedders:
+        while len(_embedders) >= config.MAX_MODELS_IN_MEMORY:
+            _embedders.pop(next(iter(_embedders)))
+            gc.collect()
+        _embedders[model] = TextEmbedding(
+            model_name=model, threads=config.EMBED_THREADS or None,
+            # grow ONNX Runtime's memory arena only as needed (the default grabs big blocks)
+            providers=[("CPUExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"})],
+        )
+    return _embedders[model]
 
 
 def embed_passages(texts: list[str], model: str | None = None) -> list[list[float]]:

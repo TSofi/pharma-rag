@@ -3,6 +3,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
+    OMP_NUM_THREADS=1 \
+    MALLOC_ARENA_MAX=2 \
     FASTEMBED_CACHE_PATH=/app/models
 
 COPY requirements.txt .
