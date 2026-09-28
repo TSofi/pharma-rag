@@ -6,18 +6,24 @@ import re
 import time
 from functools import lru_cache
 
-from . import config, llm, store
+from . import config, llm, markets, store
 
 SYSTEM_PROMPT = """You are a drug-information assistant for pharmacists.
-Answer ONLY using the numbered sources provided (excerpts from official FDA drug labels).
+Answer ONLY using the numbered sources provided (excerpts from official drug labels / patient leaflets).
 Rules:
 - Cite every factual sentence with the source number in plain ASCII square brackets, e.g. [1] or [2][3].
   Never use any other citation style (no 【】, no line ranges).
 - If the sources do not contain the answer, reply exactly: "NOT_FOUND" and nothing else.
 - Do not use outside knowledge. Do not guess doses, indications or interactions.
 - Be concise: 2-6 sentences or a short bullet list. Use plain, professional language.
-- The sources are in English; the user may want the answer in another language. Translating the
-  facts is expected and is NOT a reason to reply NOT_FOUND. Keep drug names and numbers exact."""
+- The sources may be in English, Polish or Ukrainian, and the answer may be requested in another
+  language. Translating the facts is expected and is NOT a reason to reply NOT_FOUND.
+  Keep drug names and numbers exact."""
+
+SAME_SUBSTANCE_NOTE = """
+Note: the user asks about {asked}. The sources are from the leaflet of {reps}, a product with the same
+active substance ({inn}) in the same form. Refer to the product as "{asked}" in your answer (you may say
+once that the information comes from the leaflet of a product with the same active substance)."""
 
 TRANSLATE_ANSWER_PROMPT = """Translate this drug-information answer into {language}.
 Keep every citation marker like [1] or [2][3] exactly where it is. Keep drug names and all numbers
@@ -50,7 +56,7 @@ JOKE: <reply>
 PLAIN
   -> anything else (not about health at all). Reply with just the word PLAIN."""
 
-LANGUAGES = {"en": "English", "uk": "Ukrainian", "pl": "Polish"}
+LANGUAGES = {"en": "English", "uk": "Ukrainian", "pl": "Polish", "cs": "Czech", "es": "Spanish", "fr": "French"}
 NOT_FOUND = {
     "en": "I couldn't find this in the loaded drug labels, so I won't guess. "
           "Try rephrasing, or ask about one of the drugs in the library.",
@@ -73,13 +79,25 @@ _PL_WORDS = {"jest", "czy", "jaka", "jaki", "jakie", "dawka", "dawkowanie", "lek
 NOT_FOUND_MSG = NOT_FOUND["en"]
 
 
+_CS_WORDS = {"je", "jak", "mohu", "můžu", "lék", "léku", "užívat", "těhotenství", "dávka", "nežádoucí", "při", "se", "s", "a"}
+_ES_WORDS = {"puedo", "tomar", "con", "el", "la", "es", "qué", "cómo", "embarazo", "dosis", "efectos", "para", "los", "las"}
+_FR_WORDS = {"je", "peux", "prendre", "avec", "le", "la", "est", "quels", "comment", "grossesse", "dose", "effets", "pour", "les"}
+
+
 def detect_language(text: str) -> str:
-    """Cheap heuristic, no extra API call: Cyrillic -> Ukrainian, Polish letters/words -> Polish."""
+    """Cheap heuristic, no extra API call: Cyrillic -> Ukrainian, then letters/words typical of each language."""
     if re.search(r"[а-яіїєґА-ЯІЇЄҐ]", text):
         return "uk"
-    words = set(re.findall(r"[a-ząćęłńóśźż]+", text.lower()))
-    if re.search(r"[ąćęłńśźż]", text.lower()) or len(words & _PL_WORDS) >= 2:
+    low = text.lower()
+    words = set(re.findall(r"[a-záéíóúñüàâçèêëîïôœùûąćęłńóśźżčďěňřšťůý]+", low))
+    if re.search(r"[ąęłńśźż]", low) or len(words & _PL_WORDS) >= 2:
         return "pl"
+    if re.search(r"[ěřůčšžďťň]", low) or len(words & _CS_WORDS) >= 3:
+        return "cs"
+    if re.search(r"[ñ¿¡]", low) or len(words & _ES_WORDS) >= 2:
+        return "es"
+    if re.search(r"[àâçèêëîïôœùû]", low) or len(words & _FR_WORDS) >= 2:
+        return "fr"
     return "en"
 
 
@@ -110,8 +128,10 @@ def drug_brands() -> dict[str, list[str]]:
     return brands
 
 
-def library() -> list[dict]:
+def library(market: str = "us") -> list[dict]:
     """Drugs available in the knowledge base (for the UI)."""
+    if market != "us" or config.US_FULL:
+        return markets.library(market)
     return [{"drug": d, "brands": b} for d, b in sorted(drug_brands().items())]
 
 
@@ -169,8 +189,41 @@ def build_context(chunks: list[dict]) -> str:
 
 
 # One knowledge base per country ("market"). An EU country = EMA centrally authorised products
-# (valid in every EU state) + that country's national register. Planned: at, pl, ua (see README).
-MARKETS = {"us": "United States (FDA)"}
+# (valid in every EU state) + that country's national register.
+MARKETS = {k: v["source"] for k, v in config.MARKETS.items()}
+
+
+_STOP = set("""czy mogę moge można mozna brać brac stosować jest jaki jakie jakie leku lekiem razem
+with take taking can does what when should about have from this that into чи можна приймати пити разом який
+яка які після перед puedo tomar puede para como cuál avec prendre peut quel quels pendant mohu užívat můžu""".split())
+
+
+def keyword_stems(text: str, skip: set[str]) -> set[str]:
+    """Content words of the question, cut to a stem so Polish/Ukrainian endings still match
+    (alkoholem -> alkoho, вагітності -> вагітніс)."""
+    words = re.findall(r"[^\W\d_]{4,}", text.lower())
+    return {w[:max(4, len(w) - 2)] for w in words if w not in _STOP and w not in skip}
+
+
+_CHILD = re.compile(r"dzieci|dziecka|children|child|kids|infant|pediatric|дітей|дитяч|niños|infantil|enfant|pédiatr|děti|dětsk", re.I)
+
+
+def rerank(chunks: list[dict], question: str, skip: set[str], bonus: float = 0.12,
+           prefer: set[str] | None = None) -> list[dict]:
+    """Keyword bonus + a preference for the product the user actually named (its own group), and a small
+    penalty for children's products unless the question is about children."""
+    stems = keyword_stems(question, skip)
+    about_kids = bool(_CHILD.search(question))
+    for c in chunks:
+        low = c["text"].lower()
+        hits = sum(1 for st in stems if st in low)
+        extra = bonus * min(hits, 3)
+        if prefer and c.get("group") in prefer:
+            extra += 0.04
+        if not about_kids and _CHILD.search(c.get("drug", "")):
+            extra -= 0.05  # adults' leaflet first, but a children's leaflet that answers the question stays in
+        c["score"] = round(c["score"] + extra, 3)
+    return sorted(chunks, key=lambda c: c["score"], reverse=True)
 
 
 def normalize_citations(text: str) -> str:
@@ -202,17 +255,17 @@ def fallback(question: str, out_lang: str) -> tuple[str, str]:
                              f"Question: {question}\n\nWrite any answer in {LANGUAGES[out_lang]} "
                              f"(regardless of the question's language).").strip()
     except Exception:  # noqa: BLE001 -- the fallback is optional; never fail the request because of it
-        return NOT_FOUND[out_lang], "none"
+        return NOT_FOUND.get(out_lang, NOT_FOUND["en"]), "none"
     head = reply[:20].upper()
     if "EMERGENCY" in head:
-        return EMERGENCY[out_lang], "emergency"
+        return EMERGENCY.get(out_lang, EMERGENCY["en"]), "emergency"
     for tag, mode, limit in (("GENERAL:", "general", 1500), ("JOKE:", "playful", 400)):
         if reply.upper().startswith(tag):
             text = normalize_citations(reply[len(tag):]).strip()
             text = re.sub(r"\[\d+\]", "", text)  # a general answer has no sources, so no citations
             if text and len(text) <= limit:
                 return text, mode
-    return NOT_FOUND[out_lang], "none"
+    return NOT_FOUND.get(out_lang, NOT_FOUND["en"]), "none"
 
 
 def ask(question: str, top_k: int | None = None, answer_language: str = "auto", market: str = "us") -> dict:
@@ -234,13 +287,27 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
     lang = detect_language(question)                                   # language of the QUESTION
     out_lang = lang if answer_language == "auto" else answer_language  # language of the ANSWER
 
-    # 0) QUERY REWRITING: the labels and the embedding model are English, so a Ukrainian/Polish
-    #    question is translated first. The answer is still written in the user's language.
-    search_q = question if lang == "en" else \
-        timed("translate_ms", lambda: translate_query(question)) or question
-    drugs, corrections = detect_drugs_fuzzy(search_q)
-    base = {"detected_drugs": drugs, "corrections": corrections, "language": lang, "answer_language": out_lang,
-            "market": market, "search_query": search_q if lang != "en" else None}
+    # 0) QUERY REWRITING (US only): the FDA labels and their embedding model are English, so a
+    #    Ukrainian/Polish question is translated first. PL/UA use a multilingual model: no translation.
+    if market == "us":
+        search_q = question if lang == "en" else \
+            timed("translate_ms", lambda: translate_query(question)) or question
+        if config.US_FULL:  # every FDA-labelled product by name (brand names survive translation)
+            corrections = []
+            mentions = markets.detect("us", f"{question} {search_q}")
+            drugs = sorted({g for m in mentions for g in m["groups"]})
+            field, detected = "group", [m["asked"] for m in mentions]
+        else:
+            drugs, corrections = detect_drugs_fuzzy(search_q)
+            mentions, field = [], "drug"
+            detected = drugs
+    else:
+        search_q, corrections = question, []
+        mentions = markets.detect(market, question)   # every product of the national register by name
+        drugs = sorted({g for m in mentions for g in m["groups"]})
+        field, detected = "group", [m["asked"] for m in mentions]
+    base = {"detected_drugs": detected, "corrections": corrections, "language": lang, "answer_language": out_lang,
+            "market": market, "search_query": search_q if (lang != "en" and market == "us") else None}
     def finish(result: dict) -> dict:
         timings["total_ms"] = round((time.perf_counter() - t_start) * 1000)
         print(json.dumps({"event": "ask", "lang": lang, "found": result["found"], **timings}), flush=True)
@@ -252,16 +319,33 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
                        "playful": mode == "playful", "sources": [], "model": llm.last_model_used})
 
     # 1) RETRIEVE
-    chunks = store.search(search_q, top_k=top_k, drugs=drugs or None, timings=timings)
-    relevant = [c for c in chunks if c["score"] >= config.MIN_SCORE]
+    # Hybrid retrieval: take more candidates from the vector search, then re-rank them with a small
+    # keyword bonus, so a passage that literally mentions "alkohol" beats one that is only "about ibuprofen".
+    chunks = store.search(search_q, top_k=top_k * 5, drugs=drugs or None, timings=timings, market=market, field=field)
+    names = {w for m in mentions for w in markets.norm(m["asked"]).split()} | {d.lower() for d in drugs}
+    prefer = {m["main"] for m in mentions if m.get("main")}
+    chunks = rerank(chunks, f"{question} {search_q}", names, prefer=prefer)[:top_k]
+    relevant = [c for c in chunks if c["score"] >= config.MARKETS[market]["min_score"]]
     if not relevant:
         return not_found()
+
+    # When the user names a product whose own leaflet isn't indexed (e.g. Ibuprom), the sources come from
+    # another product of the same group (e.g. Nurofen). Tell the model and the UI so it's transparent.
+    equivalents = []
+    for m in mentions:
+        reps = sorted({c["drug"] for c in relevant if c.get("group") in m["groups"]})
+        if reps and not any(markets.first_word(r) == m["key"] for r in reps):
+            inn = next(c for c in relevant if c.get("group") in m["groups"])
+            equivalents.append({"asked": m["asked"], "asked_url": m["url"], "reps": reps,
+                                "inn": inn.get("en") or inn.get("inn", ""), "form": inn.get("form", "")})
 
     # 2) AUGMENT + 3) GENERATE
     def generate(language: str) -> str:
         msg = f"Sources:\n{build_context(relevant)}\n\nQuestion: {question}"
-        if lang != "en":
+        if lang != "en" and search_q != question:
             msg += f"\n(English version of the question: {search_q})"
+        for e in equivalents:
+            msg += SAME_SUBSTANCE_NOTE.format(asked=e["asked"], reps=", ".join(e["reps"]), inn=e["inn"])
         msg += f"\n\nWrite the answer in {LANGUAGES[language]}."
         return timed("llm_ms", lambda: llm.generate(SYSTEM_PROMPT, msg)).strip()
 
@@ -283,8 +367,10 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
     answer = re.sub(r"\[(\d+)\]", lambda m: m.group(0) if 1 <= int(m.group(1)) <= len(relevant) else "", answer)
     cited = {int(n) for n in re.findall(r"\[(\d+)\]", answer)}
     sources = [
-        {"id": i, **{k: c[k] for k in ("drug", "section", "text", "url", "score", "effective_time")},
-         "brands": drug_brands().get(c["drug"], []), "cited": i in cited}
+        {"id": i, **{k: c.get(k, "") for k in ("drug", "section", "text", "url", "score", "effective_time",
+                                               "inn", "form", "source")},
+         "brands": drug_brands().get(c["drug"], []) if field == "drug" else [], "cited": i in cited}
         for i, c in enumerate(relevant, start=1)
     ]
-    return finish({**base, "answer": answer, "found": True, "mode": "sourced", "sources": sources, "model": llm.last_model_used})
+    return finish({**base, "answer": answer, "found": True, "mode": "sourced", "sources": sources,
+                   "equivalents": equivalents, "model": llm.last_model_used})

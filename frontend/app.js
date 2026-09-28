@@ -33,6 +33,8 @@ function fmtDate(yyyymmdd) {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short" });
 }
 
+const formName = (f) => (f ? t("form_" + f.replace(/[^a-z]+/g, "_")) : "");
+
 function renderSources(sources) {
   sourcesEl.innerHTML = sources.map((s) => `
     <li class="card src ${s.cited ? "" : "uncited"}" id="src-${s.id}">
@@ -40,7 +42,8 @@ function renderSources(sources) {
         <span class="cite" aria-hidden="true">${s.id}</span>
         <span class="src-drug">${esc(s.drug)}</span>
         ${s.brands?.length ? `<span class="muted">${esc(s.brands.slice(0, 2).join(", "))}</span>` : ""}
-        <span class="src-sec">${esc(s.section)}</span>
+        ${s.inn ? `<span class="muted">${esc(s.inn)}${s.form ? " · " + esc(formName(s.form)) : ""}</span>` : ""}
+        <span class="src-sec" title="${esc(s.section)}">${esc(I18N.sec(s.section))}</span>
         <span class="src-score" title="${esc(t("scoreTitle"))}">
           <span class="bar"><i style="width:${Math.max(0, Math.min(1, s.score)) * 100}%"></i></span>${s.score.toFixed(2)}
         </span>
@@ -48,7 +51,7 @@ function renderSources(sources) {
       <p class="src-text">${esc(s.text)}</p>
       <div class="src-foot">
         <button type="button" class="linkish" data-expand>${t("showFull")}</button>
-        <a href="${esc(s.url)}" target="_blank" rel="noopener">${t("openLabel")}</a>
+        <a href="${esc(s.url)}" target="_blank" rel="noopener">${s.source ? t("open_" + s.source) : t("openLabel")}</a>
       </div>
     </li>`).join("");
 }
@@ -72,6 +75,8 @@ function setMode(mode) {
   card.dataset.mode = mode;
 }
 
+let lastExchange = null;  // for the "Report a problem" form (sent only if the user keeps the box ticked)
+
 async function ask(question) {
   $("#hero").classList.add("compact");
   $("#chips").hidden = true;
@@ -87,6 +92,7 @@ async function ask(question) {
   setMode("");
   const waiting = Waiting.start(answerEl, API);
   sourcesEl.innerHTML = "";
+  $("#equiv").hidden = true;
   const t0 = performance.now();
   try {
     const r = await fetch(`${API}/api/ask`, {
@@ -99,6 +105,8 @@ async function ask(question) {
     if (!r.ok) throw new Error(data.detail || r.statusText);
 
     const mode = data.mode || (data.found ? "sourced" : data.playful ? "playful" : "none");
+    lastExchange = { question, market: $("#market").value, answer_language: $("#answerLang").value, mode,
+                     answer: data.answer, model: data.model, sources: (data.sources || []).map((s) => `${s.drug} · ${s.section} · ${s.url}`) };
     answerEl.innerHTML = renderAnswer(data.answer);
     answerEl.classList.toggle("notfound", mode === "none");
     answerEl.classList.toggle("playful", mode === "playful");
@@ -106,6 +114,11 @@ async function ask(question) {
     setMode(mode);
     $("#detected").innerHTML = (data.detected_drugs || []).map((d) => `<span>${esc(d)}</span>`).join("");
     renderSources(data.sources);
+    // Same-substance transparency: "you asked about Ibuprom, citations come from the Nurofen leaflet".
+    const eq = (data.equivalents || []).filter((e) => data.sources.some((s) => s.cited && e.reps.includes(s.drug)));
+    $("#equiv").innerHTML = eq.map((e) => `${t("equiv", { asked: esc(e.asked), reps: esc(e.reps.join(", ")), inn: esc(e.inn) })}
+      ${e.asked_url ? ` <a href="${esc(e.asked_url)}" target="_blank" rel="noopener">${t("openOwn", { asked: esc(e.asked) })}</a>` : ""}`).join("<br>");
+    $("#equiv").hidden = !eq.length;
     const cited = data.sources.filter((s) => s.cited).length;
     const dates = [...new Set(data.sources.filter((s) => s.cited).map((s) => fmtDate(s.effective_time)).filter(Boolean))];
     $("#meta").textContent = (data.found
@@ -176,6 +189,7 @@ document.addEventListener("click", (e) => {
 // The "Answer in" choice also sets the interface language ("Same as my question" = English UI).
 const applyLang = () => {
   I18N.apply($("#answerLang").value === "auto" ? "en" : $("#answerLang").value);
+  if (window.libReady) { loadLibrary(); }
   if (card.dataset.mode) setMode(card.dataset.mode);
 };
 $("#answerLang").addEventListener("change", applyLang);
@@ -190,21 +204,36 @@ applyLang();
 $("#showAll").addEventListener("change", (e) => sourcesEl.classList.toggle("hide-uncited", !e.target.checked));
 sourcesEl.classList.add("hide-uncited");
 
-// ----- market selector: the main one and the one in the library drawer stay in sync -----
-for (const [from, to] of [["#market", "#libMarket"], ["#libMarket", "#market"]]) {
-  $(from).addEventListener("change", (e) => { $(to).value = e.target.value; });
-}
-
-// ----- drug library drawer -----
+// ----- drug library drawer (one list per market) -----
 const drawer = $("#library");
 let drugs = [];
+const LIB_MAX = 300;  // the national registers have thousands of entries: render a slice, filter the rest
 function renderLib(filter = "") {
-  const f = filter.toLowerCase();
-  $("#libList").innerHTML = drugs
-    .filter((d) => !f || d.drug.includes(f) || d.brands.some((b) => b.toLowerCase().includes(f)))
-    .map((d) => `<li><button type="button" data-drug="${esc(d.drug)}"><b>${esc(d.drug)}</b><small>${esc(d.brands.join(", ") || "—")}</small></button></li>`)
-    .join("");
+  const f = filter.toLowerCase().trim();
+  const hits = drugs.filter((d) => !f || d.drug.includes(f) || d.brands.some((b) => b.toLowerCase().includes(f)));
+  $("#libList").innerHTML = hits.slice(0, LIB_MAX)
+    .map((d) => `<li><button type="button" data-drug="${esc($("#market").value === "us" ? d.drug : d.brands[0] || d.drug)}"><b>${esc(d.drug)}</b>${d.form ? ` <span class="muted">· ${esc(formName(d.form))}</span>` : ""}<small>${esc(d.brands.join(", ") || "—")}</small></button></li>`)
+    .join("") + (hits.length > LIB_MAX ? `<li class="muted lib-more">${t("libMore", { n: LIB_MAX, total: hits.length })}</li>` : "");
 }
+function loadLibrary() {
+  const m = $("#market").value;
+  $("#drugCount").textContent = "…";
+  $("#libNote").textContent = t("libNote_" + m) !== "libNote_" + m ? t("libNote_" + m) : t("libNote");
+  fetch(`${API}/api/drugs?market=${m}`).then((r) => r.json()).then((d) => {
+    drugs = d; $("#drugCount").textContent = d.length.toLocaleString(); renderLib($("#libFilter").value);
+  }).catch(() => { $("#drugCount").textContent = "offline"; });
+}
+
+// ----- market selector: the main one and the one in the library drawer stay in sync -----
+for (const [from, to] of [["#market", "#libMarket"], ["#libMarket", "#market"]]) {
+  $(from).addEventListener("change", (e) => {
+    $(to).value = e.target.value;
+    try { localStorage.setItem("market", e.target.value); } catch { /* no storage */ }
+    loadLibrary();
+  });
+}
+try { const m = localStorage.getItem("market"); if (m && [...$("#market").options].some((o) => o.value === m && !o.disabled)) { $("#market").value = m; $("#libMarket").value = m; } } catch { /* no storage */ }
+
 function toggleLib(open) { drawer.hidden = !open; $("#libraryBtn").setAttribute("aria-expanded", open); if (open) $("#libFilter").focus(); }
 $("#libraryBtn").onclick = () => toggleLib(true);
 $("#closeLib").onclick = () => toggleLib(false);
@@ -223,6 +252,41 @@ $("#libList").addEventListener("click", (e) => {
 // and needs ~50 s to start, so we start that clock while the visitor is still reading/typing.
 fetch(`${API}/api/health`).catch(() => {});
 
-fetch(`${API}/api/drugs`).then((r) => r.json()).then((d) => {
-  drugs = d; $("#drugCount").textContent = d.length; renderLib();
-}).catch(() => { $("#drugCount").textContent = "offline"; });
+loadLibrary();
+window.libReady = true;
+
+// ----- "Data sources" dialog (instead of listing every register in the footer) -----
+$("#dataBtn").onclick = () => $("#dataDialog").showModal();
+$("#closeData").onclick = () => $("#dataDialog").close();
+$("#dataDialog").addEventListener("click", (e) => { if (e.target.id === "dataDialog") e.target.close(); });
+
+// ----- "Report a problem": the message goes to the server, which e-mails it to the owner -----
+const repDlg = $("#reportDialog");
+$("#reportBtn").onclick = () => { $("#repStatus").textContent = ""; repDlg.showModal(); $("#repMsg").focus(); };
+$("#closeReport").onclick = () => repDlg.close();
+repDlg.addEventListener("click", (e) => { if (e.target === repDlg) repDlg.close(); });
+const readImage = (file) => new Promise((ok, fail) => {
+  if (!file) return ok(null);
+  if (file.size > 4 * 1024 * 1024) return fail(new Error(t("reportTooBig")));
+  const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => fail(r.error); r.readAsDataURL(file);
+});
+$("#reportForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("#repSend"); btn.disabled = true; $("#repStatus").textContent = "…";
+  try {
+    const image = await readImage($("#repShot").files[0]);
+    const context = $("#repCtx").checked && lastExchange
+      ? JSON.stringify({ ...lastExchange, page: location.href, browser: navigator.userAgent }, null, 1) : "";
+    const r = await fetch(`${API}/api/feedback`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: $("#repMsg").value, contact: $("#repContact").value, context, image,
+                             website: $("#repWebsite").value }),
+    });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+    $("#repStatus").textContent = t("reportThanks");
+    $("#reportForm").reset();
+    setTimeout(() => repDlg.close(), 1800);
+  } catch (err) {
+    $("#repStatus").textContent = `${t("reportFail")} (${err.message})`;
+  } finally { btn.disabled = false; }
+});

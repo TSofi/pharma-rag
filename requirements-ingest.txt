@@ -1,0 +1,4 @@
+# Extra packages needed only on the machine that builds the index (not on the web server).
+-r requirements.txt
+pymupdf==1.26.4
+ijson==3.4.0

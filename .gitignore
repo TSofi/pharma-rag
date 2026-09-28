@@ -7,3 +7,4 @@ qdrant_data/
 models/
 .DS_Store
 .pytest_cache/
+data/raw/

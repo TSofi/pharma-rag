@@ -9,7 +9,7 @@
   --accent-soft: #dcebe7;
   --warn: #9a4b1c;
   --src: #6b4fc9; --src-soft: #f1edfd;
-  --gen: #c2610c; --gen-soft: #fdf1e4;
+  --gen: #c9772e; --gen-soft: #fdf6ee;
   --sos: #b3261e; --sos-soft: #fdeceb;
   --cite-bg: #0f5c55;
   --cite-ink: #fffdf8;
@@ -29,7 +29,7 @@
     --accent-soft: #1e3431;
     --warn: #e2a075;
     --src: #b3a1f5; --src-soft: #221d33;
-    --gen: #f0a55e; --gen-soft: #2e2217;
+    --gen: #e8b27f; --gen-soft: #231f1b;
     --sos: #f28b82; --sos-soft: #331b1a;
     --cite-bg: #6cc4b6;
     --cite-ink: #0e1413;
@@ -266,12 +266,12 @@ body { background: var(--bg); }
    red = possible emergency. The badge in the card header says it in words too (not colour only). */
 .answer { border-left: 4px solid var(--line); transition: border-color .2s, background .2s; }
 .answer.mode-sourced { border-left-color: var(--src); }
-.answer.mode-general { border-left-color: var(--gen); background: linear-gradient(0deg, var(--gen-soft), var(--gen-soft)), var(--surface); }
+.answer.mode-general { border-left-color: color-mix(in srgb, var(--gen) 70%, transparent); background: var(--gen-soft); }
 .answer.mode-emergency { border-left-color: var(--sos); background: linear-gradient(0deg, var(--sos-soft), var(--sos-soft)), var(--surface); }
 .kind { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; padding: 3px 10px; border-radius: 999px; }
 .kind:empty { display: none; }
 .mode-sourced .kind { background: var(--src-soft); color: var(--src); }
-.mode-general .kind { background: var(--gen); color: var(--surface); }
+.mode-general .kind { background: color-mix(in srgb, var(--gen) 16%, transparent); color: var(--gen); }
 .mode-emergency .kind { background: var(--sos); color: #fff; }
 .mode-sourced .answer-body .cite { background: var(--src); color: var(--surface); }
 .src .cite { background: var(--src); color: var(--surface); }
@@ -282,3 +282,24 @@ body { background: var(--bg); }
 .legend .l-gen::before { background: var(--gen); }
 .answer-head { justify-content: flex-start; }
 .answer-head .detected { margin-left: auto; }
+
+.equiv { margin: 0 0 12px; padding: 12px 16px; border-radius: 14px; background: var(--src-soft); color: var(--ink); font-size: 14px; line-height: 1.55; }
+.equiv a { white-space: nowrap; }
+.lib-more { padding: 10px 4px; font-size: 13px; }
+
+.data-dialog { max-width: 560px; width: calc(100% - 32px); padding: 22px 24px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); }
+.data-dialog::backdrop { background: rgba(10, 14, 13, .45); backdrop-filter: blur(3px); }
+.data-list { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 12px; }
+.data-list li { display: grid; gap: 2px; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.data-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+.data-list small { color: var(--muted); font-size: 12px; }
+.foot .linkish { font: inherit; color: var(--accent); }
+
+.field { display: grid; gap: 6px; margin: 14px 0 0; font-size: 13.5px; color: var(--muted); }
+.field textarea, .field input[type=email] { font: 15px/1.5 var(--sans); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; resize: vertical; }
+.field textarea:focus, .field input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.field input[type=file] { font-size: 13px; color: var(--muted); }
+.check { display: flex; gap: 8px; align-items: center; margin: 14px 0 0; font-size: 13.5px; color: var(--muted); }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.report-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+.report-foot p { margin: 0; font-size: 13px; }

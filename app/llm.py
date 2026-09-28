@@ -165,6 +165,7 @@ def generate(system: str, user: str) -> str:
                 return _try_gemini(system, user)
         except Exception as e:  # noqa: BLE001
             error = e
+            print(f"[llm] {provider} failed, trying the next provider: {type(e).__name__}: {str(e)[:200]}", flush=True)
             if provider == "groq":
                 _trip("groq")
     raise error or RuntimeError("no LLM provider configured")

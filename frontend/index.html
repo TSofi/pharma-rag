@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=15" />
+  <link rel="stylesheet" href="style.css?v=22" />
 </head>
 <body>
   <div class="lava" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -31,12 +31,22 @@
 
     <div class="controls">
       <label class="ctl">
-        <span data-i18n="market">Market</span>
+        <span data-i18n="market">Country</span>
         <select id="market">
-          <option value="us" selected data-i18n="mkt_us">United States · FDA</option>
-          <option value="at" disabled data-i18n="mkt_at">Austria · EMA + BASG (coming soon)</option>
-          <option value="pl" disabled data-i18n="mkt_pl">Poland · EMA + URPL (coming soon)</option>
-          <option value="ua" disabled data-i18n="mkt_ua">Ukraine · State Register (coming soon)</option>
+          <option value="us" selected data-i18n="mkt_us">United States · FDA (3,000 most common)</option>
+          <option value="cz" data-i18n="mkt_cz">Czechia · SÚKL</option>
+          <option value="es" data-i18n="mkt_es">Spain · AEMPS (CIMA)</option>
+          <option value="fr" data-i18n="mkt_fr">France · ANSM (BDPM)</option>
+          <option value="pl" data-i18n="mkt_pl">Poland · URPL + EMA</option>
+          <option value="ua" data-i18n="mkt_ua">Ukraine · State Register (MOZ)</option>
+          <optgroup label="Coming soon" data-i18n-label="soon">
+            <option value="at" disabled data-i18n="mkt_at">Austria · BASG</option>
+            <option value="it" disabled data-i18n="mkt_it">Italy · AIFA</option>
+            <option value="ie" disabled data-i18n="mkt_ie">Ireland · HPRA</option>
+            <option value="se" disabled data-i18n="mkt_se">Sweden · Läkemedelsverket</option>
+            <option value="lv" disabled data-i18n="mkt_lv">Latvia · ZVA</option>
+            <option value="ee" disabled data-i18n="mkt_ee">Estonia · Ravimiamet</option>
+          </optgroup>
         </select>
       </label>
       <label class="ctl">
@@ -46,6 +56,9 @@
           <option value="en">English</option>
           <option value="uk">Українська</option>
           <option value="pl">Polski</option>
+          <option value="cs">Čeština</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
         </select>
       </label>
     </div>
@@ -86,8 +99,8 @@
         <h2 data-i18n="sources">Sources</h2>
         <label class="toggle"><input type="checkbox" id="showAll" /> <span data-i18n="showUncited">show uncited</span></label>
       </div>
+      <p id="equiv" class="equiv" hidden></p>
       <ol id="sources" class="sources"></ol>
-      <p class="legend"><span class="l-src" data-i18n="legendSrc">From official labels, with sources</span><span class="l-gen" data-i18n="legendGen">General AI info, no sources</span></p>
     </section>
   </main>
 
@@ -98,12 +111,22 @@
         <button class="ghost" id="closeLib" aria-label="Close">✕</button>
       </div>
       <label class="ctl ctl-block">
-        <span data-i18n="market">Market</span>
+        <span data-i18n="market">Country</span>
         <select id="libMarket">
-            <option value="us" selected data-i18n="mkt_us">United States · FDA</option>
-            <option value="at" disabled data-i18n="mkt_at">Austria · EMA + BASG (coming soon)</option>
-            <option value="pl" disabled data-i18n="mkt_pl">Poland · EMA + URPL (coming soon)</option>
-            <option value="ua" disabled data-i18n="mkt_ua">Ukraine · State Register (coming soon)</option>
+            <option value="us" selected data-i18n="mkt_us">United States · FDA (3,000 most common)</option>
+            <option value="cz" data-i18n="mkt_cz">Czechia · SÚKL</option>
+          <option value="es" data-i18n="mkt_es">Spain · AEMPS (CIMA)</option>
+          <option value="fr" data-i18n="mkt_fr">France · ANSM (BDPM)</option>
+          <option value="pl" data-i18n="mkt_pl">Poland · URPL + EMA</option>
+            <option value="ua" data-i18n="mkt_ua">Ukraine · State Register (MOZ)</option>
+          <optgroup label="Coming soon" data-i18n-label="soon">
+            <option value="at" disabled data-i18n="mkt_at">Austria · BASG</option>
+            <option value="it" disabled data-i18n="mkt_it">Italy · AIFA</option>
+            <option value="ie" disabled data-i18n="mkt_ie">Ireland · HPRA</option>
+            <option value="se" disabled data-i18n="mkt_se">Sweden · Läkemedelsverket</option>
+            <option value="lv" disabled data-i18n="mkt_lv">Latvia · ZVA</option>
+            <option value="ee" disabled data-i18n="mkt_ee">Estonia · Ravimiamet</option>
+          </optgroup>
         </select>
       </label>
       <p class="muted" id="libNote" data-i18n="libNote">Official FDA labels indexed in the vector database. Click one to ask about it.</p>
@@ -112,16 +135,53 @@
     </div>
   </aside>
 
+  <dialog id="dataDialog" class="card data-dialog" aria-labelledby="dataTitle">
+    <div class="drawer-head">
+      <h2 id="dataTitle" data-i18n="sourcesTitle">Where the data comes from</h2>
+      <button class="ghost" id="closeData" aria-label="Close">✕</button>
+    </div>
+    <p class="muted" data-i18n="sourcesNote">Every sourced answer comes from official, public medicine registers.</p>
+    <ul class="data-list">
+      <li><b>United States</b><a href="https://open.fda.gov/apis/drug/label/" target="_blank" rel="noopener">openFDA drug labels (FDA)</a><small>Public domain</small></li>
+      <li><b>Poland</b><span><a href="https://rejestrymedyczne.ezdrowie.gov.pl/" target="_blank" rel="noopener">Rejestr Produktów Leczniczych (URPL, e-Zdrowie)</a> + <a href="https://www.ema.europa.eu/" target="_blank" rel="noopener">EMA</a></span><small>Public register</small></li>
+      <li><b>Ukraine</b><a href="https://data.gov.ua/dataset/reestr_likarskyh_zasobiv_moz" target="_blank" rel="noopener">Державний реєстр лікарських засобів (MOZ)</a><small>CC BY 4.0</small></li>
+      <li><b>Czechia</b><a href="https://opendata.sukl.cz/" target="_blank" rel="noopener">SÚKL open data (DLP + PIL)</a><small>Open data</small></li>
+      <li><b>Spain</b><a href="https://cima.aemps.es/" target="_blank" rel="noopener">CIMA (AEMPS)</a><small>Public API</small></li>
+      <li><b>France</b><a href="https://base-donnees-publique.medicaments.gouv.fr/" target="_blank" rel="noopener">Base de Données Publique des Médicaments (ANSM)</a><small>Licence Ouverte / Etalab 2.0</small></li>
+    </ul>
+  </dialog>
+
+  <dialog id="reportDialog" class="card data-dialog" aria-labelledby="reportTitle">
+    <form id="reportForm">
+      <div class="drawer-head">
+        <h2 id="reportTitle" data-i18n="reportTitle">Report a problem</h2>
+        <button type="button" class="ghost" id="closeReport" aria-label="Close">✕</button>
+      </div>
+      <label class="field"><span data-i18n="reportMsg">What went wrong?</span>
+        <textarea id="repMsg" rows="4" minlength="5" maxlength="3000" required></textarea></label>
+      <label class="field"><span data-i18n="reportEmail">Your e-mail (optional, if you'd like a reply)</span>
+        <input id="repContact" type="email" maxlength="200" autocomplete="email" /></label>
+      <label class="field"><span data-i18n="reportShot">Screenshot (optional, up to 4 MB)</span>
+        <input id="repShot" type="file" accept="image/png,image/jpeg,image/webp,image/gif" /></label>
+      <label class="check"><input id="repCtx" type="checkbox" checked /> <span data-i18n="reportInclude">Attach my last question and answer</span></label>
+      <input id="repWebsite" name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true" />
+      <div class="report-foot">
+        <p id="repStatus" class="muted" role="status"></p>
+        <button type="submit" class="retry" id="repSend" data-i18n="reportSend">Send</button>
+      </div>
+    </form>
+  </dialog>
+
   <footer class="foot">
     <p data-i18n="foot1">Violet answers come from official drug labels: each sentence links to the exact label section. If the labels don't cover a question, you get an orange, clearly marked general answer without sources.</p>
     <p data-i18n="foot2">Demo project for educational purposes only. Not medical advice. Always consult the full prescribing information.</p>
-    <p class="muted">Data: <a href="https://open.fda.gov/apis/drug/label/" target="_blank" rel="noopener">openFDA drug labels</a> · Retrieval: Qdrant + BGE embeddings · Generation: LLM with citation constraints</p>
+    <p class="muted"><button type="button" class="linkish" id="dataBtn" data-i18n="dataSources">Data sources</button> · <button type="button" class="linkish" id="reportBtn" data-i18n="report">Report a problem</button> · Retrieval: Qdrant + multilingual embeddings · Generation: LLM with citation constraints</p>
   </footer>
 
-  <script src="config.js?v=15"></script>
-  <script src="i18n.js?v=15"></script>
-  <script src="game.js?v=15"></script>
-  <script src="waiting.js?v=15"></script>
-  <script src="app.js?v=15"></script>
+  <script src="config.js?v=22"></script>
+  <script src="i18n.js?v=22"></script>
+  <script src="game.js?v=22"></script>
+  <script src="waiting.js?v=22"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>

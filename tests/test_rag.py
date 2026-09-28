@@ -65,7 +65,7 @@ def test_giant_sentence_is_hard_split():
 def mocked_pipeline(monkeypatch):
     chunk = {"drug": "metformin", "section": "Indications and Usage", "text": "Metformin is indicated...",
              "url": "u", "score": 0.9, "effective_time": "20251101"}
-    monkeypatch.setattr(rag.store, "search", lambda q, top_k, drugs=None, timings=None: [chunk, {**chunk, "score": 0.2}])
+    monkeypatch.setattr(rag.store, "search", lambda q, top_k, drugs=None, timings=None, **kw: [chunk, {**chunk, "score": 0.2}])
     calls = {}
 
     def fake_llm(system, user):
@@ -139,7 +139,7 @@ def test_refusal_in_other_language_falls_back_to_english_then_translates(monkeyp
 
 def test_unknown_market_is_rejected():
     with pytest.raises(ValueError):
-        rag.ask("What is metformin used for?", market="pl")
+        rag.ask("What is metformin used for?", market="at")
 
 
 # ---------- loading-screen facts ----------
@@ -188,3 +188,72 @@ def test_chatty_translation_is_rejected(monkeypatch):
     assert rag.translate_query("я вдарив палець що робити") == "я вдарив палець що робити"
     monkeypatch.setattr(rag.llm, "generate", lambda s, u: "I hit my finger, what should I do?")
     assert rag.translate_query("я вдарив палець що робити") == "I hit my finger, what should I do?"
+
+
+# ---------- national markets (PL / UA): every register product is known by name ----------
+@pytest.fixture
+def pl_market(monkeypatch):
+    idx = {"groups": {"pl:ibuprofenum:oral solid": {"inn": "Ibuprofenum", "en": "Ibuprofen", "form": "oral solid",
+                                                    "cands": [{"name": "Nurofen"}]}},
+           "products": [["Nurofen Forte", "pl:ibuprofenum:oral solid", "https://x/nurofen", False],
+                        ["Ibuprom RR MAX", "pl:ibuprofenum:oral solid", "https://x/ibuprom-rr", False],
+                        ["Ibuprom", "pl:ibuprofenum:oral solid", "https://x/ibuprom", False]]}
+    rag.markets.index.cache_clear()
+    monkeypatch.setattr(rag.markets.json, "loads", lambda _text: idx)
+    monkeypatch.setattr(rag.markets.Path if hasattr(rag.markets, "Path") else type(rag.markets.MARKET_FILE),
+                        "exists", lambda self: True)
+    monkeypatch.setattr(type(rag.markets.MARKET_FILE), "read_text", lambda self, *a, **k: "{}")
+    yield idx
+    rag.markets.index.cache_clear()
+
+
+def test_market_detects_inflected_brand_names(pl_market):
+    found = rag.markets.detect("pl", "Czy mogę brać Ibupromu z alkoholem?")
+    assert [f["asked"] for f in found] == ["Ibuprom"] and found[0]["url"] == "https://x/ibuprom"
+    assert rag.markets.detect("pl", "Czy mogę prowadzić samochód?") == []
+
+
+def test_market_answer_uses_asked_name_and_explains_other_leaflet(monkeypatch, pl_market):
+    chunk = {"drug": "Nurofen Forte", "group": "pl:ibuprofenum:oral solid", "inn": "Ibuprofenum", "en": "Ibuprofen",
+             "form": "oral solid", "section": "Possible side effects", "text": "Nie pić alkoholu.", "url": "u",
+             "score": 0.7, "source": "URPL"}
+    seen = {}
+    monkeypatch.setattr(rag.store, "search", lambda q, top_k, drugs=None, timings=None, market="us", field="drug":
+                        seen.update(drugs=drugs, market=market, field=field) or [chunk])
+    calls = {}
+    monkeypatch.setattr(rag.llm, "generate", lambda system, user: calls.setdefault("user", user) and "Ibuprom: nie pić alkoholu [1].")
+    res = rag.ask("Czy mogę brać Ibuprom z alkoholem?", market="pl")
+    assert seen == {"drugs": ["pl:ibuprofenum:oral solid"], "market": "pl", "field": "group"}
+    assert res["found"] and res["detected_drugs"] == ["Ibuprom"] and res["search_query"] is None
+    eq = res["equivalents"][0]
+    assert eq["asked"] == "Ibuprom" and eq["reps"] == ["Nurofen Forte"] and eq["asked_url"] == "https://x/ibuprom"
+    assert 'Refer to the product as "Ibuprom"' in calls["user"]
+
+
+def test_rerank_prefers_passages_with_question_keywords():
+    chunks = [{"text": "Nurofen tablets contain ibuprofen 400 mg.", "score": 0.66},
+              {"text": "Nie należy pić alkoholu podczas stosowania leku.", "score": 0.60}]
+    out = rag.rerank(chunks, "Czy mogę brać Ibuprom z alkoholem?", {"ibuprom"})
+    assert "alkoholu" in out[0]["text"]
+
+
+# ---------- "Report a problem" form ----------
+def test_feedback_is_mailed_without_exposing_the_address(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import config, feedback, main
+    monkeypatch.setattr(config, "RESEND_API_KEY", "key")
+    monkeypatch.setattr(config, "FEEDBACK_TO", "owner@example.com")
+    sent = {}
+
+    class R:
+        status_code = 200
+    monkeypatch.setattr(feedback.httpx, "post", lambda url, json, timeout, headers: sent.update(json) or R())
+    feedback._recent.clear()
+    c = TestClient(main.app)
+    png = "data:image/png;base64,iVBORw0KGgo="
+    r = c.post("/api/feedback", json={"message": "Wrong answer about Ibuprom", "contact": "me@x.io", "image": png})
+    assert r.status_code == 200 and sent["to"] == ["owner@example.com"] and sent["reply_to"] == "me@x.io"
+    assert sent["attachments"][0]["filename"] == "screenshot.png"
+    assert "owner@example.com" not in r.text
+    assert c.post("/api/feedback", json={"message": "hello there", "image": "data:text/html;base64,AAAA"}).status_code == 400
+    assert c.post("/api/feedback", json={"message": "spam spam", "website": "x"}).json() == {"ok": True}
