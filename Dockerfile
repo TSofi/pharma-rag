@@ -10,10 +10,11 @@ ENV PYTHONUNBUFFERED=1 \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Bake the embedding model into the image so the first request isn't slow.
-RUN python -c "from fastembed import TextEmbedding; TextEmbedding('BAAI/bge-small-en-v1.5'); TextEmbedding('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
-
 COPY app ./app
+# Bake int8 versions of both embedding models into the image (~150 MB instead of ~300 MB float16):
+# questions are embedded locally, no embedding API needed, and it fits the free 512 MB instance.
+ENV INT8_MODEL_DIR=/app/models_int8
+RUN python -m app.int8_models
 COPY frontend ./frontend
 COPY data ./data
 

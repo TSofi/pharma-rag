@@ -38,6 +38,8 @@ REMOTE_EMBED_MODELS = [m.strip() for m in os.getenv("REMOTE_EMBED_MODELS", "").s
 MAX_MODELS_IN_MEMORY = int(os.getenv("MAX_MODELS_IN_MEMORY", "1"))
 EMBED_THREADS = int(os.getenv("EMBED_THREADS", "0"))  # 0 = let ONNX Runtime decide
 MULTI_EMBED_MODEL = os.getenv("MULTI_EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+# int8 copies of both models (app/int8_models.py); used instead of the originals when present.
+INT8_MODEL_DIR = os.getenv("INT8_MODEL_DIR", str(ROOT / "models_int8"))
 
 # --- Vector database (Qdrant) ----------------------------------------------
 # If QDRANT_URL is empty we use Qdrant's embedded "local mode" (a folder on disk),

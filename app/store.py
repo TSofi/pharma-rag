@@ -29,8 +29,10 @@ def get_embedder(model: str | None = None) -> TextEmbedding:
         while len(_embedders) >= config.MAX_MODELS_IN_MEMORY:
             _embedders.pop(next(iter(_embedders)))
             gc.collect()
+        from .int8_models import path as int8_path
         _embedders[model] = TextEmbedding(
             model_name=model, threads=config.EMBED_THREADS or None,
+            specific_model_path=int8_path(model),  # int8 version if built (fits the 512 MB server)
             # grow ONNX Runtime's memory arena only as needed (the default grabs big blocks)
             providers=[("CPUExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"})],
         )

@@ -8,3 +8,5 @@ models/
 .DS_Store
 .pytest_cache/
 data/raw/
+models_cache/
+models_int8/
