@@ -20,15 +20,39 @@ from . import config
 _embedders: dict[str, TextEmbedding] = {}
 
 
+def _evict_to_fit() -> None:
+    while len(_embedders) >= config.MAX_MODELS_IN_MEMORY:
+        _embedders.pop(next(iter(_embedders)))
+        gc.collect()
+        try:  # hand freed memory back to the OS (glibc keeps it otherwise)
+            import ctypes
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+        except OSError:
+            pass
+
+
+def get_query_embedder(model: str):
+    """Question embedder. The multilingual model gets the memory-light tokenizer (app/light_embed.py) when its
+    int8 version is built; everything else uses fastembed."""
+    from .int8_models import path as int8_path
+    key = f"query:{model}"
+    d = int8_path(model) if model == config.MULTI_EMBED_MODEL else None
+    if not d:
+        return None
+    if key not in _embedders:
+        _evict_to_fit()
+        from .light_embed import LightEmbedder
+        _embedders[key] = LightEmbedder(d, threads=config.EMBED_THREADS or None)
+    return _embedders[key]
+
+
 def get_embedder(model: str | None = None) -> TextEmbedding:
     """Load an embedding model once and keep it. On a small server (512 MB) only MAX_MODELS_IN_MEMORY
     models are kept: switching from the US (English model) to Poland (multilingual) swaps them,
     which costs ~1-2 s once instead of running out of memory."""
     model = model or config.EMBED_MODEL
     if model not in _embedders:
-        while len(_embedders) >= config.MAX_MODELS_IN_MEMORY:
-            _embedders.pop(next(iter(_embedders)))
-            gc.collect()
+        _evict_to_fit()
         from .int8_models import path as int8_path
         _embedders[model] = TextEmbedding(
             model_name=model, threads=config.EMBED_THREADS or None,
@@ -72,6 +96,9 @@ def embed_query(text: str, model: str | None = None) -> list[float]:
             return remote_embed([text], model)[0]
         except Exception as e:  # noqa: BLE001 -- e.g. free API credits used up: fall back to the local model
             print(f"[embed] remote failed, using local model: {e}", flush=True)
+    light = get_query_embedder(model)
+    if light is not None:
+        return light.embed(text)
     # Queries and passages are embedded slightly differently for BGE models.
     return next(iter(get_embedder(model).query_embed(text))).tolist()
 
