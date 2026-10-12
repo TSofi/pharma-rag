@@ -1,0 +1,21 @@
+# Daily ping so the free services don't go idle: wakes the Render API, and /api/health touches Qdrant Cloud
+# (free clusters are suspended after a week without requests). Can also be run by hand: Actions -> keepalive.
+name: keepalive
+on:
+  schedule:
+    - cron: "17 6 * * *"   # every day at 06:17 UTC
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API health (Render free instances take ~1 min to wake up)
+        run: |
+          for i in 1 2 3 4 5; do
+            if out=$(curl -fsS --max-time 120 https://pharma-rag-smgm.onrender.com/api/health); then
+              echo "$out"
+              echo "$out" | grep -q '"qdrant_collections":[0-9]' && exit 0
+            fi
+            echo "attempt $i failed, retrying in 30 s"; sleep 30
+          done
+          exit 1
