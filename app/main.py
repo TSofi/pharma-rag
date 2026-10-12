@@ -56,8 +56,14 @@ class AskRequest(BaseModel):
 
 @app.get("/api/health")
 def health():
+    # Touches Qdrant on purpose: a daily ping (GitHub Actions) keeps the free cluster from being suspended.
+    try:
+        qdrant = len(store.get_client().get_collections().collections)
+    except Exception as e:  # noqa: BLE001
+        qdrant = f"error: {type(e).__name__}"
     return {
         "status": "ok",
+        "qdrant_collections": qdrant,
         "llm": config.LLM_PROVIDER,
         "vector_db": "qdrant-cloud" if config.QDRANT_URL else "qdrant-local",
         "drugs": len(rag.library()),

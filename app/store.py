@@ -66,7 +66,10 @@ def remote_embed(texts: list[str], model: str) -> list[list[float]]:
 def embed_query(text: str, model: str | None = None) -> list[float]:
     model = model or config.EMBED_MODEL
     if model in config.REMOTE_EMBED_MODELS and config.HF_TOKEN:
-        return remote_embed([text], model)[0]
+        try:
+            return remote_embed([text], model)[0]
+        except Exception as e:  # noqa: BLE001 -- e.g. free API credits used up: fall back to the local model
+            print(f"[embed] remote failed, using local model: {e}", flush=True)
     # Queries and passages are embedded slightly differently for BGE models.
     return next(iter(get_embedder(model).query_embed(text))).tolist()
 
