@@ -20,11 +20,21 @@ class UnigramTokenizer:
     def __init__(self, tokenizer_json: str):
         with open(tokenizer_json, encoding="utf-8") as f:
             vocab = json.load(f)["model"]["vocab"]
-        self.ids = {p: i for i, (p, _) in enumerate(vocab)}  # piece -> id
-        self.scores = np.array([s for _, s in vocab], dtype=np.float64)
+        # 250k Python strings in a dict cost ~100 MB, so pieces are kept only as sorted 64-bit hashes
+        # (numpy, ~6 MB in total). The UTF-8 bytes are hashed, not the str: CPython hashes a str's internal
+        # buffer, so "na" (1 byte/char) and "慮" (U+616E, 2 bytes/char) would collide.
+        h = np.array([hash(p.encode()) for p, _ in vocab], dtype=np.int64)
+        order = np.argsort(h, kind="stable")
+        self.hashes, self.piece_ids = h[order], order.astype(np.int32)
+        self.scores = np.array([sc for _, sc in vocab], dtype=np.float64)
+        self.max_len = max(len(p) for p, _ in vocab)
         del vocab
-        self.max_len = max(len(p) for p in self.ids)
         self.unk_score = float(self.scores.min()) - 10.0
+
+    def _lookup(self, piece: str) -> int | None:
+        h = hash(piece.encode())
+        i = int(np.searchsorted(self.hashes, h, side="right")) - 1  # a few pieces appear twice: last id wins
+        return int(self.piece_ids[i]) if i >= 0 and self.hashes[i] == h else None
 
     def _word(self, w: str) -> list[int]:
         n = len(w)
@@ -35,7 +45,7 @@ class UnigramTokenizer:
                 continue
             base, found_single = best[i][0], False
             for j in range(i + 1, min(n, i + self.max_len) + 1):
-                pid = self.ids.get(w[i:j])
+                pid = self._lookup(w[i:j])
                 if pid is not None:
                     if j == i + 1:
                         found_single = True

@@ -53,7 +53,7 @@ def first_word(name: str) -> str:
     return re.split(r"[\s,;/()]+", norm(name))[0].strip("-.")
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=16)  # keep every country loaded: re-parsing a JSON file is a memory spike
 def index(market: str) -> dict:
     path = MARKET_FILE.parent / f"{market}.json"
     if not path.exists():
