@@ -10,3 +10,5 @@ models/
 data/raw/
 models_cache/
 models_int8/
+.coverage
+*.tar.gz

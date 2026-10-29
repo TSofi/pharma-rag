@@ -12,7 +12,8 @@ SYSTEM_PROMPT = """You are a drug-information assistant for pharmacists.
 Answer ONLY using the numbered sources provided (excerpts from official drug labels / patient leaflets).
 Rules:
 - Cite every factual sentence with the source number in plain ASCII square brackets, e.g. [1] or [2][3].
-  Never use any other citation style (no 【】, no line ranges).
+  Cite each source separately: [2][3], never [2-3] or [2, 3]. Cite only the 1-3 sources that really
+  contain the fact, not all of them. Never use any other citation style (no 【】, no line ranges).
 - If the sources do not contain the answer, reply exactly: "NOT_FOUND" and nothing else.
 - Do not use outside knowledge. Do not guess doses, indications or interactions.
 - Be concise: 2-6 sentences or a short bullet list. Use plain, professional language.
@@ -64,6 +65,12 @@ NOT_FOUND = {
           "Спробуйте переформулювати питання або оберіть препарат із бібліотеки.",
     "pl": "Nie znalazłam tego w załadowanych ulotkach leków, więc nie będę zgadywać. "
           "Spróbuj przeformułować pytanie albo wybierz lek z biblioteki.",
+    "cs": "Nenašla jsem to v načtených příbalových informacích, takže nebudu hádat. "
+          "Zkuste otázku přeformulovat nebo vyberte lék z knihovny.",
+    "es": "No lo he encontrado en los prospectos cargados, así que no voy a adivinar. "
+          "Intente reformular la pregunta o elija un medicamento de la biblioteca.",
+    "fr": "Je n'ai pas trouvé cela dans les notices chargées, donc je ne vais pas deviner. "
+          "Essayez de reformuler la question ou choisissez un médicament dans la bibliothèque.",
 }
 EMERGENCY = {
     "en": "This may be an emergency. Call your local emergency number (112 in the EU, 911 in the US) "
@@ -72,6 +79,12 @@ EMERGENCY = {
           "або в токсикологічний центр. Не чекайте відповіді онлайн.",
     "pl": "To może być stan nagły. Zadzwoń natychmiast na numer alarmowy 112 lub do ośrodka toksykologicznego. "
           "Nie czekaj na odpowiedź online.",
+    "cs": "Může jít o stav ohrožení života. Okamžitě volejte tísňovou linku 112 (nebo 155) "
+          "nebo Toxikologické informační středisko. Nečekejte na odpověď online.",
+    "es": "Esto puede ser una emergencia. Llame ahora al 112 o al Servicio de Información Toxicológica. "
+          "No espere una respuesta en línea.",
+    "fr": "Il peut s'agir d'une urgence. Appelez immédiatement le 112 (ou le 15, SAMU) "
+          "ou un centre antipoison. N'attendez pas une réponse en ligne.",
 }
 _PL_WORDS = {"jest", "czy", "jaka", "jaki", "jakie", "dawka", "dawkowanie", "lek", "leku", "można", "mozna",
              "się", "sie", "na", "przy", "ciąży", "ciazy", "skutki", "uboczne", "działa", "dziala", "dla",
@@ -202,47 +215,149 @@ def build_context(chunks: list[dict]) -> str:
 MARKETS = {k: v["source"] for k, v in config.MARKETS.items()}
 
 
-_STOP = set("""czy mogę moge można mozna brać brac stosować jest jaki jakie jakie leku lekiem razem
-with take taking can does what when should about have from this that into чи можна приймати пити разом який
-яка які після перед puedo tomar puede para como cuál avec prendre peut quel quels pendant mohu užívat můžu""".split())
+# Words that carry no information for keyword matching: question words, pronouns, prepositions, helper
+# verbs and the generic "medicine" nouns that appear in every leaflet passage. Only words of 4+ letters
+# matter here (shorter ones never become keywords). Hand-curated on purpose: ready-made stop lists contain
+# words that matter medically ("high", "low", "use", "problem"). Form words (tablet, syrup) are NOT here.
+_STOP_BY_LANG = {
+    "en": """this that these those what when where which while during before after with without about
+            from into over under between through because should could would might must shall will
+            have having been being does doing take taking took taken give given make made need needs
+            also only very more most some such than then them they their there here your yours mine
+            medicine medicines medication medications drug drugs product remedy okay safe allowed""",
+    "pl": """czy mogę moge można mozna brać brac stosować stosowac przyjmować przyjmowac używać uzywac
+            jest być bedzie będzie jaki jaka jakie jakich które który która ktore ktory ktora kiedy gdzie
+            podczas przed przez między miedzy oraz jeśli jesli jeżeli jezeli żeby zeby także takze również
+            rowniez tylko bardzo jego jej tego tej tych ten tym razem wraz leku lekiem leków lekow leki
+            lekarstwo lekarstwa preparat preparatu bezpiecznie bezpieczny wolno powinienem powinnam""",
+    "uk": """можна потрібно треба приймати прийняти пити вживати застосовувати використовувати разом
+            який яка яке які якої якого після перед через разі коли куди звідки також тільки лише дуже
+            цей цього цьому цією цієї цим тому того тієї вона вони воно їхній його може можуть мені
+            препарат препарату препаратом препарати ліки ліків ліками лікарський безпечно дозволено""",
+    "cs": """mohu můžu můžeme užívat uzivat používat pouzivat brát tento tato toto tyto tohoto této
+            během behem před pred kdy kde jaký jaká jaké který která které také pouze velmi jeho její
+            jestli pokud nebo proto tedy léku leku lékem lekem léky leky přípravek pripravek
+            přípravku bezpečně bezpecne smím""",
+    "es": """puedo puede pueden debo debe tomar tomarlo usar utilizar este esta esto estos estas
+            durante antes después despues mientras para como cuál cual cuáles cuales cuándo cuando
+            dónde donde también tambien sólo solo muy pero porque desde hasta entre sobre
+            medicamento medicamentos fármaco farmaco producto seguro""",
+    "fr": """puis peux peut pouvez prendre utiliser avec sans pour pendant avant après apres lors
+            quel quels quelle quelles quand comment pourquoi cette ceci cela ceux celle celles leur leurs
+            aussi très tres mais donc alors parce entre dans vers chez
+            médicament medicament médicaments medicaments produit sûr""",
+}
+_STOP = {w for words in _STOP_BY_LANG.values() for w in words.split()}
+
+
+_UK_WORD = re.compile(r"[а-яіїєґ']+")
+
+
+@lru_cache(maxsize=1)
+def _uk_morph():
+    """The Ukrainian dictionary (pymorphy3, ~20 MB RAM, loaded once on first use). None if not installed,
+    so the app keeps working with the plain stem rule only."""
+    try:
+        import pymorphy3
+        return pymorphy3.MorphAnalyzer(lang="uk")
+    except Exception:  # noqa: BLE001 -- missing package or dictionary: degrade, never crash
+        return None
+
+
+@lru_cache(maxsize=4096)
+def uk_forms(word: str) -> frozenset[str]:
+    """Every grammatical form of a Ukrainian word the dictionary knows (болю -> біль, болі, болем, ...),
+    from every reading (солі -> сіль and сол). Empty for Latin-script words and for words the dictionary
+    doesn't know (brand names, typos), which then rely on the stem rule alone."""
+    morph = _uk_morph()
+    if morph is None or not _UK_WORD.fullmatch(word) or not morph.word_is_known(word):
+        return frozenset()
+    return frozenset(f.word for p in morph.parse(word) for f in p.lexeme)
+
+
+def _stem(word: str) -> str:
+    return word[:max(4, len(word) - 2)]
+
+
+def keyword_groups(text: str, skip: set[str]) -> list[tuple[set[str], set[str]]]:
+    """One entry per content word of the question: (stems, forms).
+    - stems: the word cut to a stem so Polish/Ukrainian endings still match (alkoholem -> alkohol);
+    - forms: all grammatical forms from the Ukrainian dictionary (вагітності -> вагітність, ...), so a
+      case change in the middle of the word (біль / болю) is found too. Empty for other languages.
+    Two question words that are forms of the same word (вагітності, вагітність) make ONE entry."""
+    groups: dict[object, tuple[set[str], set[str]]] = {}
+    for w in re.findall(r"[^\W\d_]{4,}", text.lower()):
+        if w in _STOP or w in skip:
+            continue
+        forms = uk_forms(w)
+        key = forms if forms else _stem(w)
+        stems, fs = groups.setdefault(key, (set(), set()))
+        stems.add(_stem(w))
+        fs |= forms
+    return list(groups.values())
 
 
 def keyword_stems(text: str, skip: set[str]) -> set[str]:
-    """Content words of the question, cut to a stem so Polish/Ukrainian endings still match
-    (alkoholem -> alkoho, вагітності -> вагітніс)."""
-    words = re.findall(r"[^\W\d_]{4,}", text.lower())
-    return {w[:max(4, len(w) - 2)] for w in words if w not in _STOP and w not in skip}
+    """Content words of the question, cut to a stem (alkoholem -> alkohol, вагітності -> вагітнос)."""
+    return {st for stems, _ in keyword_groups(text, skip) for st in stems}
 
 
-_CHILD = re.compile(r"dzieci|dziecka|children|child|kids|infant|pediatric|дітей|дитяч|niños|infantil|enfant|pédiatr|děti|dětsk", re.I)
+def keyword_hits(text: str, groups: list[tuple[set[str], set[str]]]) -> int:
+    """How many question words a passage contains: a stem anywhere in the text, or a dictionary form as a
+    whole word. One point per question word, however often it appears.
+    A 4-letter stem is the whole (uncut) word and matches inside longer words ("біль" inside "більше" = more),
+    so when the dictionary knows the word, such short stems are skipped and its forms decide alone."""
+    low = text.lower()
+    words = set(re.findall(r"[^\W\d_]+", low))
+    return sum(1 for stems, forms in groups
+               if any(st in low for st in stems if len(st) > 4 or not forms) or bool(forms & words))
+
+
+_CHILD = re.compile(r"dzieci|dziecka|niemowl|junior|baby|children|child|kids|infant|pediatric|дітей|дитяч|малюк|немовл"
+                    r"|niños|infantil|pediátr|bebé|lactante|enfant|pédiatr|bébé|nourrisson|děti|dětsk|kojenc|batol", re.I)
 
 
 def rerank(chunks: list[dict], question: str, skip: set[str], bonus: float = 0.12,
            prefer: set[str] | None = None) -> list[dict]:
     """Keyword bonus + a preference for the product the user actually named (its own group), and a small
     penalty for children's products unless the question is about children."""
-    stems = keyword_stems(question, skip)
+    groups = keyword_groups(question, skip)
     about_kids = bool(_CHILD.search(question))
     for c in chunks:
-        low = c["text"].lower()
-        hits = sum(1 for st in stems if st in low)
-        extra = bonus * min(hits, 3)
+        extra = bonus * min(keyword_hits(c["text"], groups), 3)
         if prefer and c.get("group") in prefer:
             extra += 0.04
-        if not about_kids and _CHILD.search(c.get("drug", "")):
-            extra -= 0.05  # adults' leaflet first, but a children's leaflet that answers the question stays in
+        if not about_kids and _CHILD.search(c.get("drug", "")) and c.get("group") not in (prefer or ()):
+            # adults' leaflet first, but a children's leaflet that answers the question stays in,
+            # and a children's product the user explicitly named is never pushed down
+            extra -= 0.05
         c["score"] = round(c["score"] + extra, 3)
     return sorted(chunks, key=lambda c: c["score"], reverse=True)
 
 
-def normalize_citations(text: str) -> str:
-    """Some models cite in their own style: 【2】, 【1†L1-L3】, [1, 2] or [1-3]. Convert all of that
-    to plain [n] markers, which the UI turns into clickable source badges."""
+def normalize_citations(text: str, n_sources: int | None = None) -> str:
+    """Some models cite in their own style: 【2】, 【1†L1-L3】, [1, 2], [1-3] or [source 2]. Convert all of
+    that to plain [n] markers, which the UI turns into clickable source badges. A range is expanded and
+    clipped to the real sources (with 6 sources [1-20] -> [1]..[6], [4-2] -> [2][3][4]); a marker is never
+    deleted as a whole, so a sentence does not silently lose its source."""
+    cap = n_sources if n_sources else 30  # without a source count, still never explode on [1-9999]
+
+    def expand(m):
+        lo, hi = sorted((int(m[1]), int(m[2])))
+        return "".join(f"[{i}]" for i in range(lo, min(hi, cap) + 1))
     text = re.sub(r"【\s*(\d+)[^】]*】", r"[\1]", text)
-    text = re.sub(r"\[(\d+)\s*[-–]\s*(\d+)\]",
-                  lambda m: "".join(f"[{i}]" for i in range(int(m[1]), int(m[2]) + 1) if int(m[2]) - int(m[1]) < 10), text)
+    text = re.sub(r"\[\s*(?:sources?|src)\s*(\d+)\s*\]", r"[\1]", text, flags=re.I)
+    text = re.sub(r"\[(\d+)\s*[-–]\s*(\d+)\]", expand, text)
     text = re.sub(r"\[(\d+(?:\s*,\s*\d+)+)\]", lambda m: "".join(f"[{n.strip()}]" for n in m[1].split(",")), text)
-    return re.sub(r"\s+(\[\d+\])", r"\1", text)
+    text = re.sub(r"\s+(\[\d+\])", r"\1", text)
+    return re.sub(r"\s+([.,;:!?])", r"\1", text)  # a marker that vanished leaves "alcohol ." behind
+
+
+def uncited_sentences(text: str) -> int:
+    """How many sentences / bullet lines of an answer carry no [n] marker -- an honesty signal for the logs
+    and the UI (the text is kept: cutting the model's words could change the meaning)."""
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-ZА-ЯІЇЄҐ¿¡])|\n+", text)  # a capital letter after ". " = new sentence
+    return sum(1 for p in parts if re.search(r"\w", p) and not re.search(r"\[\d+\]", p))
 
 
 def translate_query(question: str) -> str:
@@ -319,7 +434,8 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
             "market": market, "search_query": search_q if (lang != "en" and market == "us") else None}
     def finish(result: dict) -> dict:
         timings["total_ms"] = round((time.perf_counter() - t_start) * 1000)
-        print(json.dumps({"event": "ask", "lang": lang, "found": result["found"], **timings}), flush=True)
+        print(json.dumps({"event": "ask", "lang": lang, "found": result["found"],
+                          "uncited_sentences": result.get("uncited_sentences"), **timings}), flush=True)
         return {**result, "timings": timings}
 
     def not_found() -> dict:
@@ -370,11 +486,13 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
     if not answer or "NOT_FOUND" in answer:
         return not_found()
 
-    answer = normalize_citations(answer)
+    answer = normalize_citations(answer, len(relevant))
     # Drop citations that point to non-existent sources (a small hallucination guard),
     # then record which source numbers the model actually cited.
     answer = re.sub(r"\[(\d+)\]", lambda m: m.group(0) if 1 <= int(m.group(1)) <= len(relevant) else "", answer)
+    answer = re.sub(r"\s+([.,;:!?])", r"\1", answer)
     cited = {int(n) for n in re.findall(r"\[(\d+)\]", answer)}
+    uncited = uncited_sentences(answer)
     sources = [
         {"id": i, **{k: c.get(k, "") for k in ("drug", "section", "text", "url", "score", "effective_time",
                                                "inn", "form", "source")},
@@ -382,4 +500,4 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
         for i, c in enumerate(relevant, start=1)
     ]
     return finish({**base, "answer": answer, "found": True, "mode": "sourced", "sources": sources,
-                   "equivalents": equivalents, "model": llm.last_model_used})
+                   "equivalents": equivalents, "model": llm.last_model_used, "uncited_sentences": uncited})

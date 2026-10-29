@@ -6,6 +6,7 @@
 import email
 import html
 import re
+import unicodedata
 from html.parser import HTMLParser
 
 
@@ -144,8 +145,21 @@ def fr_notice(text: str) -> str:
     return re.sub(r"\s*Redirection vers le haut de page", "", text).strip()
 
 
+def fold_accents(text: str) -> str:
+    """é -> e, É -> E, ž -> z ... one character in, one character out, so positions found in the folded
+    text are valid in the original. Headings printed in CAPITALS usually drop their accents
+    ("QUELS SONT LES EFFETS INDESIRABLES", "COMO TOMAR"), so headings are matched accent-blind."""
+    out = []
+    for ch in text:
+        base = unicodedata.normalize("NFKD", ch)
+        out.append(base[0] if base and not unicodedata.combining(base[0]) and len(base[0]) == 1 else ch)
+    return "".join(out)
+
+
 def sections_pl(text: str, lang: str = "pl") -> list[tuple[str, str]]:
-    """EU patient leaflets (QRD template): split at the six numbered headings, in any supported language."""
+    """EU patient leaflets (QRD template): split at the six numbered headings, in any supported language.
+    Headings are matched case- and accent-insensitively ("4. QUELS SONT LES EFFETS INDESIRABLES"), with
+    "4." / "4 -" / "4)" numbering; the section text itself is saved untouched."""
     if lang == "fr" and "Base de Données Publique des Médicaments" in text:  # a BDPM page, not an EMA PDF
         text = fr_notice(text)
     else:
@@ -153,8 +167,9 @@ def sections_pl(text: str, lang: str = "pl") -> list[tuple[str, str]]:
     if not text:
         return []
     heads = []
+    folded = fold_accents(text)  # same length as text: match here, cut there
     for (num, _, label), pat in zip(PL_SECTIONS, QRD[lang]):
-        found = list(re.finditer(rf"(?m)^\s*{num}\.?\s*({pat})", text, flags=re.I))
+        found = list(re.finditer(rf"(?m)^\s*{num}\s*[.)\-–:]?\s*({fold_accents(pat)})", folded, flags=re.I))
         if found:
             heads.append((found[-1].start() if len(found) > 1 else found[0].start(), label))  # last = after TOC
     heads.sort()

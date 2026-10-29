@@ -159,10 +159,21 @@ def test_facts_do_not_repeat_seen_drugs():
     assert rag.random_fact(seen)["drug"] == "metformin"
 
 
-def test_facts_are_translated():
+def test_facts_are_translated_into_every_ui_language():
+    """Catches: a fact added in English only (a Czech/Spanish/French loading screen would show English)."""
     for f in rag._facts():
-        assert f.get("text_uk") and f.get("text_pl")
+        for lang in rag.LANGUAGES:
+            if lang != "en":
+                assert f.get(f"text_{lang}"), f"{f['drug']}: no text_{lang}"
+                assert 40 <= len(f[f"text_{lang}"]) <= 220, f"{f['drug']} {lang}: {f[f'text_{lang}']}"
     assert re.search("[а-яіїє]", rag.random_fact(lang="uk")["text"])
+    assert re.search("[ěščřžůáéí]", rag.random_fact(lang="cs")["text"])
+
+
+def test_fact_in_unknown_language_falls_back_to_english():
+    """Catches: a KeyError on the loading screen when the UI asks for a language the facts don't have."""
+    fact = rag.random_fact(lang="de")
+    assert fact["text"] in {f["text"] for f in rag._facts()}
 
 
 def test_response_includes_stage_timings(mocked_pipeline):
@@ -180,6 +191,43 @@ def test_response_includes_stage_timings(mocked_pipeline):
 ])
 def test_citation_styles_are_normalized(raw, clean):
     assert rag.normalize_citations(raw) == clean
+
+
+@pytest.mark.parametrize("raw, n, clean", [
+    ("Avoid alcohol [1-20].", 6, "Avoid alcohol[1][2][3][4][5][6]."),   # was: marker deleted, sentence left unsourced
+    ("Avoid alcohol [1-20].", None, "Avoid alcohol" + "".join(f"[{i}]" for i in range(1, 21)) + "."),
+    ("Avoid alcohol [1-9999].", None, "Avoid alcohol" + "".join(f"[{i}]" for i in range(1, 31)) + "."),  # capped
+    ("Avoid alcohol [4-2].", 6, "Avoid alcohol[2][3][4]."),              # reversed range
+    ("Avoid alcohol [8-9].", 6, "Avoid alcohol."),                       # entirely outside: nothing to keep
+    ("Avoid alcohol [source 2] [Source 3] [src 1].", 6, "Avoid alcohol[2][3][1]."),
+])
+def test_citation_ranges_are_never_silently_deleted(raw, n, clean):
+    """Catches: a range of 10+ sources ([1-20]) being dropped together with its sentence marker, so the
+    text is shown with no source; also reversed ranges and "[source 2]" spellings."""
+    assert rag.normalize_citations(raw, n) == clean
+
+
+def test_answer_with_a_wide_range_keeps_valid_citations_end_to_end(mocked_pipeline):
+    """Catches: ask() calling normalize_citations without the source count -- [1-20] with one source
+    must become [1] and that source must be marked as cited."""
+    mocked_pipeline["reply"] = "Metformin treats diabetes [1-20]."
+    res = rag.ask("What is metformin used for?")
+    assert res["answer"] == "Metformin treats diabetes[1]."
+    assert res["sources"][0]["cited"] is True and res["uncited_sentences"] == 0
+
+
+def test_uncited_sentences_are_counted(mocked_pipeline):
+    """Catches: the honesty counter missing a sentence that lost its only citation (invalid number) or
+    never had one; bullets and numbers like "2.5 mg" must not be counted as sentence ends."""
+    mocked_pipeline["reply"] = "Take 2.5 mg daily [1]. Something unsupported. Another claim [9].\n- a bullet [1]\n- a bare bullet"
+    res = rag.ask("What is metformin used for?")
+    assert res["uncited_sentences"] == 3
+
+
+def test_prompt_forbids_citation_ranges_explicitly():
+    """Catches: the "no ranges" rule being dropped from SYSTEM_PROMPT (the old text said only "no line
+    ranges", which models read as L1-L3, not [1-3])."""
+    assert "never [2-3]" in rag.SYSTEM_PROMPT
 
 
 def test_chatty_translation_is_rejected(monkeypatch):

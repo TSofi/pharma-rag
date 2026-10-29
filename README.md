@@ -94,7 +94,7 @@ python -m scripts.fetch_eu             # ES, FR, CZ
 python -m scripts.fetch_us             # openFDA bulk labels
 python -m scripts.ingest_markets --markets pl,ua,cz,es,fr
 python -m scripts.ingest_markets --markets us --top 3000
-python -m pytest                       # 36 tests
+python -m pytest                       # see tests/TESTING.md
 python -m scripts.debug_ask pl "Czy mogę brać Ibuprom z alkoholem?"   # inspect retrieval
 ```
 

@@ -5,3 +5,5 @@ fastembed==0.8.1
 google-genai==2.25.0
 anthropic==1.8.0
 python-dotenv==1.2.3
+pymorphy3==2.0.6
+pymorphy3-dicts-uk==2.4.1.1.1663094765

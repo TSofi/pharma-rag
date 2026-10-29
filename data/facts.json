@@ -5,7 +5,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Metformin",
   "text_uk": "Метформін походить від козлятника лікарського (Galega officinalis), квітки з середньовічної європейської народної медицини. Її активна речовина надихнула створення ліків.",
-  "text_pl": "Metformina wywodzi się od rutwicy lekarskiej (Galega officinalis), rośliny używanej w średniowiecznej medycynie ludowej. Jej aktywny związek zainspirował powstanie leku."
+  "text_pl": "Metformina wywodzi się od rutwicy lekarskiej (Galega officinalis), rośliny używanej w średniowiecznej medycynie ludowej. Jej aktywny związek zainspirował powstanie leku.",
+  "text_cs": "Metformin má původ v jestřabině lékařské (Galega officinalis), rostlině používané ve středověké evropské lidové medicíně. Její účinná látka inspirovala vznik léku.",
+  "text_es": "La metformina procede de la ruda cabruna (Galega officinalis), una planta usada en la medicina popular europea medieval. Su compuesto activo inspiró el fármaco.",
+  "text_fr": "La metformine vient du galéga officinal (Galega officinalis), une plante de la médecine populaire européenne médiévale. Son composé actif a inspiré le médicament."
  },
  {
   "drug": "warfarin",
@@ -13,7 +16,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Warfarin",
   "text_uk": "Назва «варфарин» походить від WARF (Wisconsin Alumni Research Foundation), яка фінансувала його відкриття, плюс «-арин» від кумарину.",
-  "text_pl": "Nazwa „warfaryna” pochodzi od WARF (Wisconsin Alumni Research Foundation), która sfinansowała jej odkrycie, plus „-aryna” od kumaryny."
+  "text_pl": "Nazwa „warfaryna” pochodzi od WARF (Wisconsin Alumni Research Foundation), która sfinansowała jej odkrycie, plus „-aryna” od kumaryny.",
+  "text_cs": "Název warfarinu pochází z WARF (Wisconsin Alumni Research Foundation), nadace, která financovala jeho objev, plus „-arin“ z kumarinu.",
+  "text_es": "El nombre warfarina viene de WARF (Wisconsin Alumni Research Foundation), que financió su descubrimiento, más «-arina» de cumarina.",
+  "text_fr": "Le nom warfarine vient de WARF (Wisconsin Alumni Research Foundation), qui a financé sa découverte, plus « -arine » de coumarine."
  },
  {
   "drug": "warfarin",
@@ -21,7 +27,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Warfarin",
   "text_uk": "Перш ніж стати ліками для серця, варфарин продавали як отруту для щурів. Усе почалося в 1920-х, коли корови кровоточили, наївшись зіпсованого буркуну.",
-  "text_pl": "Zanim warfaryna stała się lekiem na serce, sprzedawano ją jako trutkę na szczury. Wszystko zaczęło się w latach 20., gdy krowy krwawiły po zjedzeniu zepsutego nostrzyku."
+  "text_pl": "Zanim warfaryna stała się lekiem na serce, sprzedawano ją jako trutkę na szczury. Wszystko zaczęło się w latach 20., gdy krowy krwawiły po zjedzeniu zepsutego nostrzyku.",
+  "text_cs": "Než se warfarin stal lékem na srdce, prodával se jako jed na krysy. Jeho příběh začal ve 20. letech, když dobytek krvácel po zkaženém jeteli.",
+  "text_es": "Antes de ser un medicamento cardíaco, la warfarina se vendía como raticida. Su historia empezó en los años 20, cuando el ganado sangraba tras comer trébol estropeado.",
+  "text_fr": "Avant de devenir un médicament pour le cœur, la warfarine était vendue comme mort-aux-rats. Son histoire a commencé dans les années 1920, quand du bétail saignait après avoir mangé du trèfle avarié."
  },
  {
   "drug": "sildenafil",
@@ -29,7 +38,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Sildenafil",
   "text_uk": "Силденафіл спершу вивчали як ліки від стенокардії (болю в грудях). Його найвідомішу дію помітили вже під час клінічних випробувань.",
-  "text_pl": "Sildenafil badano najpierw jako lek na dławicę piersiową. Jego najbardziej znane działanie zauważono dopiero podczas badań klinicznych."
+  "text_pl": "Sildenafil badano najpierw jako lek na dławicę piersiową. Jego najbardziej znane działanie zauważono dopiero podczas badań klinicznych.",
+  "text_cs": "Sildenafil byl nejprve zkoumán jako lék na anginu pectoris (bolest na hrudi). Jeho nejznámější účinek si výzkumníci všimli až během klinických studií.",
+  "text_es": "El sildenafilo se estudió primero como tratamiento de la angina (dolor torácico). Su efecto más conocido se descubrió durante los ensayos clínicos.",
+  "text_fr": "Le sildénafil a d'abord été étudié contre l'angine de poitrine. Son effet le plus connu n'a été remarqué que pendant les essais cliniques."
  },
  {
   "drug": "acetaminophen",
@@ -37,7 +49,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Paracetamol",
   "text_uk": "«Ацетамінофен» (США) і «парацетамол» (Європа) — це той самий препарат. Обидві назви утворені від хімічної назви пара-ацетиламінофенол.",
-  "text_pl": "„Acetaminofen” (USA) i „paracetamol” (Europa) to ten sam lek. Obie nazwy pochodzą od nazwy chemicznej para-acetyloaminofenol."
+  "text_pl": "„Acetaminofen” (USA) i „paracetamol” (Europa) to ten sam lek. Obie nazwy pochodzą od nazwy chemicznej para-acetyloaminofenol.",
+  "text_cs": "„Acetaminophen“ (USA) a „paracetamol“ (Evropa) je tentýž lék. Oba názvy vznikly z chemického názvu para-acetylaminofenol.",
+  "text_es": "«Acetaminofén» (EE. UU.) y «paracetamol» (Europa) son el mismo fármaco. Ambos nombres salen de su nombre químico, para-acetilaminofenol.",
+  "text_fr": "« Acétaminophène » (États-Unis) et « paracétamol » (Europe) désignent le même médicament. Les deux noms viennent du nom chimique para-acétylaminophénol."
  },
  {
   "drug": "albuterol",
@@ -45,7 +60,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Salbutamol",
   "text_uk": "Альбутерол (США) і сальбутамол (Європа) — абсолютно та сама молекула, просто з різними офіційними назвами по обидва боки Атлантики.",
-  "text_pl": "Albuterol (USA) i salbutamol (Europa) to dokładnie ta sama cząsteczka, tylko z innymi oficjalnymi nazwami po obu stronach Atlantyku."
+  "text_pl": "Albuterol (USA) i salbutamol (Europa) to dokładnie ta sama cząsteczka, tylko z innymi oficjalnymi nazwami po obu stronach Atlantyku.",
+  "text_cs": "Albuterol (USA) a salbutamol (Evropa) jsou přesně tatáž molekula, jen s jiným oficiálním názvem na každé straně Atlantiku.",
+  "text_es": "Albuterol (EE. UU.) y salbutamol (Europa) son exactamente la misma molécula, solo con nombres oficiales distintos a cada lado del Atlántico.",
+  "text_fr": "L'albutérol (États-Unis) et le salbutamol (Europe) sont exactement la même molécule, avec un nom officiel différent de chaque côté de l'Atlantique."
  },
  {
   "drug": "atorvastatin",
@@ -53,7 +71,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Atorvastatin",
   "text_uk": "Аторвастатин (Ліпітор) — один із найпродаваніших препаратів в історії. Кілька років поспіль він був найпопулярнішими ліками у світі.",
-  "text_pl": "Atorwastatyna (Lipitor) to jeden z najlepiej sprzedających się leków w historii. Przez lata była najpopularniejszym lekiem na świecie."
+  "text_pl": "Atorwastatyna (Lipitor) to jeden z najlepiej sprzedających się leków w historii. Przez lata była najpopularniejszym lekiem na świecie.",
+  "text_cs": "Atorvastatin (Lipitor) je jedním z nejprodávanějších léků v historii. Po léta byl nejprodávanějším lékem na světě.",
+  "text_es": "La atorvastatina (Lipitor) es uno de los fármacos más vendidos de la historia. Durante años fue el medicamento más vendido del mundo.",
+  "text_fr": "L'atorvastatine (Lipitor) est l'un des médicaments les plus vendus de l'histoire. Pendant des années, c'était le médicament le plus vendu au monde."
  },
  {
   "drug": "simvastatin",
@@ -61,7 +82,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Simvastatin",
   "text_uk": "Статини почалися з грибів: симвастатин виготовляють із речовини, яку продукує пліснява Aspergillus terreus.",
-  "text_pl": "Statyny zaczęły się od grzybów: symwastatynę wytwarza się ze związku produkowanego przez pleśń Aspergillus terreus."
+  "text_pl": "Statyny zaczęły się od grzybów: symwastatynę wytwarza się ze związku produkowanego przez pleśń Aspergillus terreus.",
+  "text_cs": "Statiny začaly u hub: simvastatin se vyrábí ze sloučeniny produkované plísní Aspergillus terreus.",
+  "text_es": "Las estatinas empezaron con los hongos: la simvastatina se fabrica a partir de un compuesto producido por el moho Aspergillus terreus.",
+  "text_fr": "Les statines sont nées des champignons : la simvastatine est fabriquée à partir d'un composé produit par la moisissure Aspergillus terreus."
  },
  {
   "drug": "omeprazole",
@@ -69,7 +93,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Omeprazole",
   "text_uk": "Омепразол став першим інгібітором протонної помпи. Він блокує крихітні «насоси» в слизовій шлунка, які виділяють кислоту.",
-  "text_pl": "Omeprazol był pierwszym inhibitorem pompy protonowej. Blokuje maleńkie „pompy” w błonie żołądka, które wydzielają kwas."
+  "text_pl": "Omeprazol był pierwszym inhibitorem pompy protonowej. Blokuje maleńkie „pompy” w błonie żołądka, które wydzielają kwas.",
+  "text_cs": "Omeprazol byl prvním inhibitorem protonové pumpy. Blokuje drobné „pumpy“ ve sliznici žaludku, které uvolňují kyselinu.",
+  "text_es": "El omeprazol fue el primer inhibidor de la bomba de protones. Bloquea las pequeñas «bombas» de la mucosa gástrica que liberan ácido.",
+  "text_fr": "L'oméprazole a été le premier inhibiteur de la pompe à protons. Il bloque les minuscules « pompes » de la muqueuse gastrique qui libèrent l'acide."
  },
  {
   "drug": "bupropion",
@@ -77,7 +104,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Bupropion",
   "text_uk": "Та сама молекула, бупропіон, продається і як антидепресант (Wellbutrin), і як засіб, щоб кинути курити (Zyban).",
-  "text_pl": "Ta sama cząsteczka, bupropion, jest sprzedawana jako antydepresant (Wellbutrin) i jako lek pomagający rzucić palenie (Zyban)."
+  "text_pl": "Ta sama cząsteczka, bupropion, jest sprzedawana jako antydepresant (Wellbutrin) i jako lek pomagający rzucić palenie (Zyban).",
+  "text_cs": "Tatáž molekula, bupropion, se prodává jako antidepresivum (Wellbutrin) i jako pomůcka k odvykání kouření (Zyban).",
+  "text_es": "La misma molécula, bupropión, se vende como antidepresivo (Wellbutrin) y como ayuda para dejar de fumar (Zyban).",
+  "text_fr": "La même molécule, le bupropion, est vendue comme antidépresseur (Wellbutrin) et comme aide au sevrage tabagique (Zyban)."
  },
  {
   "drug": "allopurinol",
@@ -85,7 +115,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Allopurinol",
   "text_uk": "Алопуринол розробили Гертруда Елайон і Джордж Гітчингс, які розділили Нобелівську премію з фізіології та медицини 1988 року.",
-  "text_pl": "Allopurynol opracowali Gertrude Elion i George Hitchings, którzy podzielili się Nagrodą Nobla w dziedzinie fizjologii lub medycyny w 1988 roku."
+  "text_pl": "Allopurynol opracowali Gertrude Elion i George Hitchings, którzy podzielili się Nagrodą Nobla w dziedzinie fizjologii lub medycyny w 1988 roku.",
+  "text_cs": "Allopurinol vyvinuli Gertrude Elionová a George Hitchings, kteří v roce 1988 získali Nobelovu cenu za fyziologii a medicínu.",
+  "text_es": "El alopurinol fue desarrollado por Gertrude Elion y George Hitchings, que compartieron el Premio Nobel de Fisiología o Medicina de 1988.",
+  "text_fr": "L'allopurinol a été développé par Gertrude Elion et George Hitchings, qui ont partagé le prix Nobel de physiologie ou médecine en 1988."
  },
  {
   "drug": "ibuprofen",
@@ -93,7 +126,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Ibuprofen",
   "text_uk": "Ібупрофен відкрили в 1960-х у британській компанії Boots — командою під керівництвом фармаколога Стюарта Адамса.",
-  "text_pl": "Ibuprofen odkryto w latach 60. w brytyjskiej firmie Boots, w zespole kierowanym przez farmakologa Stewarta Adamsa."
+  "text_pl": "Ibuprofen odkryto w latach 60. w brytyjskiej firmie Boots, w zespole kierowanym przez farmakologa Stewarta Adamsa.",
+  "text_cs": "Ibuprofen objevil v 60. letech tým firmy Boots ve Velké Británii pod vedením farmakologa Stewarta Adamse.",
+  "text_es": "El ibuprofeno fue descubierto en los años 60 por un equipo de Boots, en el Reino Unido, dirigido por el farmacólogo Stewart Adams.",
+  "text_fr": "L'ibuprofène a été découvert dans les années 1960 par une équipe de Boots, au Royaume-Uni, dirigée par le pharmacologue Stewart Adams."
  },
  {
   "drug": "amoxicillin",
@@ -101,7 +137,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Amoxicillin",
   "text_uk": "Амоксицилін належить до родини пеніцилінів, історія яких почалася 1928 року, коли Александр Флемінг помітив, що пліснява вбиває бактерії на забутій чашці.",
-  "text_pl": "Amoksycylina należy do rodziny penicylin, których historia zaczęła się w 1928 roku, gdy Aleksander Fleming zauważył pleśń zabijającą bakterie na zapomnianej płytce."
+  "text_pl": "Amoksycylina należy do rodziny penicylin, których historia zaczęła się w 1928 roku, gdy Aleksander Fleming zauważył pleśń zabijającą bakterie na zapomnianej płytce.",
+  "text_cs": "Amoxicilin patří do rodiny penicilinů, jejíž příběh začal v roce 1928, když si Alexander Fleming všiml plísně zabíjející bakterie na zapomenuté misce.",
+  "text_es": "La amoxicilina pertenece a la familia de las penicilinas, cuya historia empezó en 1928, cuando Alexander Fleming vio un moho matando bacterias en una placa olvidada.",
+  "text_fr": "L'amoxicilline appartient à la famille des pénicillines, dont l'histoire a commencé en 1928, quand Alexander Fleming a vu une moisissure tuer des bactéries sur une boîte oubliée."
  },
  {
   "drug": "azithromycin",
@@ -109,7 +148,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Azithromycin",
   "text_uk": "Азитроміцин відкрили 1980 року хіміки компанії Pliva у Загребі, Хорватія.",
-  "text_pl": "Azytromycynę odkryli w 1980 roku chemicy firmy Pliva w Zagrzebiu w Chorwacji."
+  "text_pl": "Azytromycynę odkryli w 1980 roku chemicy firmy Pliva w Zagrzebiu w Chorwacji.",
+  "text_cs": "Azithromycin objevili v roce 1980 chemici ve firmě Pliva, farmaceutické společnosti v chorvatském Záhřebu.",
+  "text_es": "La azitromicina fue descubierta en 1980 por químicos de Pliva, una empresa farmacéutica de Zagreb, Croacia.",
+  "text_fr": "L'azithromycine a été découverte en 1980 par des chimistes de Pliva, une société pharmaceutique de Zagreb, en Croatie."
  },
  {
   "drug": "clopidogrel",
@@ -117,7 +159,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Clopidogrel",
   "text_uk": "Клопідогрел — проліки: він не діє, доки його не перетворить печінка. Люди з певними варіантами гена CYP2C19 активують його погано.",
-  "text_pl": "Klopidogrel to prolek: nie działa, dopóki nie przekształci go wątroba. Osoby z pewnymi wariantami genu CYP2C19 aktywują go słabo."
+  "text_pl": "Klopidogrel to prolek: nie działa, dopóki nie przekształci go wątroba. Osoby z pewnymi wariantami genu CYP2C19 aktywują go słabo.",
+  "text_cs": "Klopidogrel je proléčivo: nedělá nic, dokud ho nepřemění játra. Lidé s některými variantami genu CYP2C19 ho aktivují špatně.",
+  "text_es": "El clopidogrel es un profármaco: no hace nada hasta que el hígado lo transforma. Las personas con ciertas variantes del gen CYP2C19 lo activan mal.",
+  "text_fr": "Le clopidogrel est un promédicament : il ne fait rien tant que le foie ne l'a pas transformé. Les personnes porteuses de certaines variantes du gène CYP2C19 l'activent mal."
  },
  {
   "drug": "finasteride",
@@ -125,7 +170,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Finasteride",
   "text_uk": "Фінастерид продається в одній дозі для лікування збільшеної простати (Proscar) і в значно меншій — від облисіння (Propecia).",
-  "text_pl": "Finasteryd sprzedaje się w jednej dawce na powiększoną prostatę (Proscar) i w znacznie mniejszej na łysienie (Propecia)."
+  "text_pl": "Finasteryd sprzedaje się w jednej dawce na powiększoną prostatę (Proscar) i w znacznie mniejszej na łysienie (Propecia).",
+  "text_cs": "Finasterid se prodává v jedné síle na zvětšenou prostatu (Proscar) a v mnohem nižší síle na vypadávání vlasů (Propecia).",
+  "text_es": "La finasterida se vende en una dosis para la próstata agrandada (Proscar) y en una mucho menor para la caída del cabello (Propecia).",
+  "text_fr": "Le finastéride est vendu à un dosage pour la prostate hypertrophiée (Proscar) et à un dosage bien plus faible contre la chute des cheveux (Propecia)."
  },
  {
   "drug": "prednisone",
@@ -133,7 +181,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Prednisone",
   "text_uk": "Преднізон — проліки: печінка перетворює його на преднізолон, форму, яка й гасить запалення.",
-  "text_pl": "Prednizon to prolek: wątroba zamienia go w prednizolon, formę, która faktycznie wycisza stan zapalny."
+  "text_pl": "Prednizon to prolek: wątroba zamienia go w prednizolon, formę, która faktycznie wycisza stan zapalny.",
+  "text_cs": "Prednison je proléčivo: játra ho přemění na prednisolon, formu, která skutečně tlumí zánět.",
+  "text_es": "La prednisona es un profármaco: el hígado la convierte en prednisolona, la forma que realmente calma la inflamación.",
+  "text_fr": "La prednisone est un promédicament : le foie la transforme en prednisolone, la forme qui calme réellement l'inflammation."
  },
  {
   "drug": "empagliflozin",
@@ -141,7 +192,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Empagliflozin",
   "text_uk": "Емпагліфлозин знижує цукор незвичним способом: змушує нирки виводити зайву глюкозу з сечею.",
-  "text_pl": "Empagliflozyna obniża cukier w nietypowy sposób: sprawia, że nerki usuwają nadmiar glukozy z moczem."
+  "text_pl": "Empagliflozyna obniża cukier w nietypowy sposób: sprawia, że nerki usuwają nadmiar glukozy z moczem.",
+  "text_cs": "Empagliflozin snižuje cukr v krvi neobvyklým způsobem: nechává ledviny vylučovat přebytečnou glukózu močí.",
+  "text_es": "La empagliflozina baja el azúcar en sangre de un modo inusual: hace que los riñones eliminen el exceso de glucosa por la orina.",
+  "text_fr": "L'empagliflozine abaisse la glycémie de façon inhabituelle : elle fait éliminer l'excès de glucose par les reins dans les urines."
  },
  {
   "drug": "gabapentin",
@@ -149,7 +203,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Gabapentin",
   "text_uk": "Габапентин задумували як імітатор мозкового медіатора ГАМК, але виявилося, що на ГАМК-рецептори він не діє взагалі.",
-  "text_pl": "Gabapentyna miała naśladować przekaźnik mózgowy GABA, ale okazało się, że w ogóle nie działa na receptory GABA."
+  "text_pl": "Gabapentyna miała naśladować przekaźnik mózgowy GABA, ale okazało się, że w ogóle nie działa na receptory GABA.",
+  "text_cs": "Gabapentin byl navržen tak, aby napodoboval mozkový přenašeč GABA, ale ukázalo se, že na receptory GABA vůbec nepůsobí.",
+  "text_es": "La gabapentina se diseñó para imitar al mensajero cerebral GABA, pero resulta que no actúa en absoluto sobre los receptores GABA.",
+  "text_fr": "La gabapentine a été conçue pour imiter le messager cérébral GABA, mais il s'avère qu'elle n'agit pas du tout sur les récepteurs GABA."
  },
  {
   "drug": "escitalopram",
@@ -157,7 +214,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Escitalopram",
   "text_uk": "Есциталопрам — буквально половина циталопраму: це лише «лівостороння» дзеркальна версія молекули (S-енантіомер).",
-  "text_pl": "Escitalopram to dosłownie połowa citalopramu: tylko „lewoskrętna” lustrzana wersja cząsteczki (S-enancjomer)."
+  "text_pl": "Escitalopram to dosłownie połowa citalopramu: tylko „lewoskrętna” lustrzana wersja cząsteczki (S-enancjomer).",
+  "text_cs": "Escitalopram je doslova polovina citalopramu: je to jen „levotočivá“ zrcadlová verze (S-enantiomer) molekuly.",
+  "text_es": "El escitalopram es literalmente la mitad del citalopram: solo la versión especular «zurda» (enantiómero S) de la molécula.",
+  "text_fr": "L'escitalopram est littéralement la moitié du citalopram : seule la version « gauche » en miroir (énantiomère S) de la molécule."
  },
  {
   "drug": "cetirizine",
@@ -165,7 +225,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Cetirizine",
   "text_uk": "Цетиризин утворюється в організмі зі старішого антигістамінного препарату, гідроксизину. Це його менш снодійний «нащадок».",
-  "text_pl": "Cetyryzyna powstaje w organizmie ze starszego leku przeciwhistaminowego, hydroksyzyny. To jej mniej usypiający „potomek”."
+  "text_pl": "Cetyryzyna powstaje w organizmie ze starszego leku przeciwhistaminowego, hydroksyzyny. To jej mniej usypiający „potomek”.",
+  "text_cs": "Cetirizin vzniká v těle ze staršího antihistaminika, hydroxyzinu. Je to jeho méně tlumivý potomek.",
+  "text_es": "La cetirizina se forma en el cuerpo a partir de un antihistamínico más antiguo, la hidroxizina. Es su descendiente menos sedante.",
+  "text_fr": "La cétirizine est produite dans l'organisme à partir d'un antihistaminique plus ancien, l'hydroxyzine. C'est sa descendante moins sédative."
  },
  {
   "drug": "loratadine",
@@ -173,7 +236,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Loratadine",
   "text_uk": "Новіші антигістамінні, як-от лоратадин, менше присипляють, бо майже не проникають із крові в мозок.",
-  "text_pl": "Nowsze leki przeciwhistaminowe, jak loratadyna, mniej usypiają, bo prawie nie przenikają z krwi do mózgu."
+  "text_pl": "Nowsze leki przeciwhistaminowe, jak loratadyna, mniej usypiają, bo prawie nie przenikają z krwi do mózgu.",
+  "text_cs": "Novější antihistaminika jako loratadin způsobují menší ospalost, protože téměř nepřecházejí z krve do mozku.",
+  "text_es": "Los antihistamínicos más nuevos, como la loratadina, dan menos sueño porque apenas pasan de la sangre al cerebro.",
+  "text_fr": "Les antihistaminiques récents comme la loratadine provoquent moins de somnolence, car ils passent à peine du sang vers le cerveau."
  },
  {
   "drug": "furosemide",
@@ -181,7 +247,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Furosemide",
   "text_uk": "Кажуть, назва «Лазикс» походить від «lasts six (hours)» — «діє шість годин», типова тривалість дії фуросеміду.",
-  "text_pl": "Mówi się, że nazwa Lasix pochodzi od „lasts six (hours)” — „działa sześć godzin”, typowy czas działania furosemidu."
+  "text_pl": "Mówi się, że nazwa Lasix pochodzi od „lasts six (hours)” — „działa sześć godzin”, typowy czas działania furosemidu.",
+  "text_cs": "O názvu Lasix se často říká, že pochází z „lasts six (hours)“ – obvyklé doby trvání účinku furosemidu.",
+  "text_es": "Se suele decir que la marca Lasix viene de «lasts six (hours)», la duración típica del efecto de la furosemida.",
+  "text_fr": "On dit souvent que la marque Lasix vient de « lasts six (hours) », la durée typique de l'effet du furosémide."
  },
  {
   "drug": "lisinopril",
@@ -189,7 +258,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/ACE_inhibitor",
   "text_uk": "Інгібітори АПФ, як-от лізиноприл, ведуть родовід від отрути бразильської змії — ботропса (Bothrops jararaca).",
-  "text_pl": "Inhibitory ACE, jak lizynopryl, wywodzą się z jadu brazylijskiego węża, żararaki (Bothrops jararaca)."
+  "text_pl": "Inhibitory ACE, jak lizynopryl, wywodzą się z jadu brazylijskiego węża, żararaki (Bothrops jararaca).",
+  "text_cs": "ACE inhibitory jako lisinopril mají původ v jedu brazilského křovináře Bothrops jararaca.",
+  "text_es": "Los inhibidores de la ECA como el lisinopril proceden del veneno de una víbora brasileña, Bothrops jararaca.",
+  "text_fr": "Les inhibiteurs de l'ECA comme le lisinopril viennent du venin d'une vipère brésilienne, Bothrops jararaca."
  },
  {
   "drug": "losartan",
@@ -197,7 +269,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Losartan",
   "text_uk": "Лозартан став першим блокатором рецепторів ангіотензину II (сартаном), схваленим у середині 1990-х.",
-  "text_pl": "Losartan był pierwszym antagonistą receptora angiotensyny II (sartanem), zatwierdzonym w połowie lat 90."
+  "text_pl": "Losartan był pierwszym antagonistą receptora angiotensyny II (sartanem), zatwierdzonym w połowie lat 90.",
+  "text_cs": "Losartan byl prvním blokátorem receptoru pro angiotenzin II (sartanem), schváleným v polovině 90. let.",
+  "text_es": "El losartán fue el primer antagonista del receptor de angiotensina II (ARA-II), aprobado a mediados de los años 90.",
+  "text_fr": "Le losartan a été le premier antagoniste des récepteurs de l'angiotensine II (sartan), approuvé au milieu des années 1990."
  },
  {
   "drug": "metoprolol",
@@ -205,7 +280,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/James_Black_(pharmacologist)",
   "text_uk": "Бета-блокатори, як-от метопролол, існують завдяки серу Джеймсу Блеку, який отримав Нобелівську премію 1988 року почасти за винахід цього класу ліків.",
-  "text_pl": "Beta-blokery, jak metoprolol, istnieją dzięki sir Jamesowi Blackowi, który otrzymał Nagrodę Nobla w 1988 roku m.in. za wynalezienie tej klasy leków."
+  "text_pl": "Beta-blokery, jak metoprolol, istnieją dzięki sir Jamesowi Blackowi, który otrzymał Nagrodę Nobla w 1988 roku m.in. za wynalezienie tej klasy leków.",
+  "text_cs": "Betablokátory jako metoprolol existují díky siru Jamesi Blackovi, který v roce 1988 získal Nobelovu cenu zčásti za vynález této lékové skupiny.",
+  "text_es": "Los betabloqueantes como el metoprolol existen gracias a Sir James Black, que recibió el Nobel de 1988 en parte por inventar esta clase de fármacos.",
+  "text_fr": "Les bêtabloquants comme le métoprolol existent grâce à Sir James Black, prix Nobel 1988 en partie pour l'invention de cette classe de médicaments."
  },
  {
   "drug": "carvedilol",
@@ -213,7 +291,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Carvedilol",
   "text_uk": "Карведилол блокує два типи рецепторів — і бета, і альфа, тож не лише сповільнює серце, а й розширює судини.",
-  "text_pl": "Karwedylol blokuje dwa rodzaje receptorów, beta i alfa, więc nie tylko spowalnia serce, ale też rozszerza naczynia."
+  "text_pl": "Karwedylol blokuje dwa rodzaje receptorów, beta i alfa, więc nie tylko spowalnia serce, ale też rozszerza naczynia.",
+  "text_cs": "Karvedilol blokuje dva druhy receptorů, beta i alfa, takže kromě zpomalení srdce také rozšiřuje cévy.",
+  "text_es": "El carvedilol bloquea dos tipos de receptores, beta y alfa, por lo que además de frenar el corazón dilata los vasos sanguíneos.",
+  "text_fr": "Le carvédilol bloque deux types de récepteurs, bêta et alpha, ce qui dilate les vaisseaux en plus de ralentir le cœur."
  },
  {
   "drug": "doxycycline",
@@ -221,7 +302,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Tetracycline_antibiotics",
   "text_uk": "Доксициклін належить до тетрациклінів — антибіотиків, уперше знайдених у Streptomyces, ґрунтових бактеріях.",
-  "text_pl": "Doksycyklina należy do tetracyklin, antybiotyków odkrytych po raz pierwszy w Streptomyces, bakteriach żyjących w glebie."
+  "text_pl": "Doksycyklina należy do tetracyklin, antybiotyków odkrytych po raz pierwszy w Streptomyces, bakteriach żyjących w glebie.",
+  "text_cs": "Doxycyklin patří k tetracyklinům, antibiotikům poprvé nalezeným u bakterií Streptomyces, které žijí v půdě.",
+  "text_es": "La doxiciclina pertenece a las tetraciclinas, antibióticos hallados por primera vez en Streptomyces, bacterias que viven en el suelo.",
+  "text_fr": "La doxycycline appartient aux tétracyclines, des antibiotiques découverts chez Streptomyces, des bactéries qui vivent dans le sol."
  },
  {
   "drug": "methotrexate",
@@ -229,7 +313,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Methotrexate",
   "text_uk": "Метотрексат працює на два фронти: великі дози лікують деякі види раку, а малі щотижневі — заспокоюють ревматоїдний артрит.",
-  "text_pl": "Metotreksat działa na dwa fronty: wysokie dawki leczą niektóre nowotwory, a niskie cotygodniowe łagodzą reumatoidalne zapalenie stawów."
+  "text_pl": "Metotreksat działa na dwa fronty: wysokie dawki leczą niektóre nowotwory, a niskie cotygodniowe łagodzą reumatoidalne zapalenie stawów.",
+  "text_cs": "Methotrexát je lék s dvojí rolí: vysoké dávky léčí některé nádory, nízké týdenní dávky tlumí revmatoidní artritidu.",
+  "text_es": "El metotrexato tiene doble función: en dosis altas trata algunos cánceres y en dosis bajas semanales calma la artritis reumatoide.",
+  "text_fr": "Le méthotrexate a un double rôle : à forte dose il traite certains cancers, à faible dose hebdomadaire il calme la polyarthrite rhumatoïde."
  },
  {
   "drug": "apixaban",
@@ -237,7 +324,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Apixaban",
   "text_uk": "На відміну від варфарину, апіксабан блокує лише один білок згортання (фактор Xa) і не потребує регулярних аналізів МНВ.",
-  "text_pl": "W przeciwieństwie do warfaryny apiksaban blokuje tylko jedno białko krzepnięcia (czynnik Xa) i nie wymaga regularnych badań INR."
+  "text_pl": "W przeciwieństwie do warfaryny apiksaban blokuje tylko jedno białko krzepnięcia (czynnik Xa) i nie wymaga regularnych badań INR.",
+  "text_cs": "Na rozdíl od warfarinu blokuje apixaban jediný srážecí faktor (Xa) a nevyžaduje pravidelné kontroly INR.",
+  "text_es": "A diferencia de la warfarina, el apixabán bloquea una sola proteína de la coagulación (factor Xa) y no necesita controles de INR rutinarios.",
+  "text_fr": "Contrairement à la warfarine, l'apixaban bloque une seule protéine de la coagulation (facteur Xa) et ne nécessite pas de contrôles d'INR réguliers."
  },
  {
   "drug": "fluoxetine",
@@ -245,7 +335,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Fluoxetine",
   "text_uk": "Флуоксетин (Прозак) вийшов на ринок США 1988 року й став одним із найвідоміших ліків своєї епохи.",
-  "text_pl": "Fluoksetyna (Prozac) trafiła na rynek USA w 1988 roku i stała się jednym z najsłynniejszych leków swojej epoki."
+  "text_pl": "Fluoksetyna (Prozac) trafiła na rynek USA w 1988 roku i stała się jednym z najsłynniejszych leków swojej epoki.",
+  "text_cs": "Fluoxetin (Prozac) přišel na americký trh v roce 1988 a stal se jedním z nejslavnějších léků své doby.",
+  "text_es": "La fluoxetina (Prozac) llegó al mercado de EE. UU. en 1988 y se convirtió en uno de los medicamentos más famosos de su época.",
+  "text_fr": "La fluoxétine (Prozac) est arrivée sur le marché américain en 1988 et est devenue l'un des médicaments les plus célèbres de son époque."
  },
  {
   "drug": "sitagliptin",
@@ -253,7 +346,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Sitagliptin",
   "text_uk": "Ситагліптин став першим інгібітором ДПП-4. Він підсилює кишкові гормони, які кажуть підшлунковій виділити інсулін після їжі.",
-  "text_pl": "Sitagliptyna była pierwszym inhibitorem DPP-4. Wzmacnia hormony jelitowe, które każą trzustce uwolnić insulinę po posiłku."
+  "text_pl": "Sitagliptyna była pierwszym inhibitorem DPP-4. Wzmacnia hormony jelitowe, które każą trzustce uwolnić insulinę po posiłku.",
+  "text_cs": "Sitagliptin byl prvním inhibitorem DPP-4. Posiluje střevní hormony, které po jídle říkají slinivce, aby uvolnila inzulin.",
+  "text_es": "La sitagliptina fue el primer inhibidor de la DPP-4. Potencia las hormonas intestinales que ordenan al páncreas liberar insulina tras las comidas.",
+  "text_fr": "La sitagliptine a été le premier inhibiteur de la DPP-4. Elle renforce les hormones intestinales qui disent au pancréas de libérer l'insuline après les repas."
  },
  {
   "drug": "tamsulosin",
@@ -261,7 +357,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Tamsulosin",
   "text_uk": "Тамсулозин розслабляє гладкі м'язи навколо простати, і сечовипускання стає легшим.",
-  "text_pl": "Tamsulosyna rozluźnia mięśnie gładkie wokół prostaty, co ułatwia oddawanie moczu."
+  "text_pl": "Tamsulosyna rozluźnia mięśnie gładkie wokół prostaty, co ułatwia oddawanie moczu.",
+  "text_cs": "Tamsulosin uvolňuje hladké svalstvo kolem prostaty, což usnadňuje močení.",
+  "text_es": "La tamsulosina relaja el músculo liso que rodea la próstata, lo que facilita orinar.",
+  "text_fr": "La tamsulosine relâche le muscle lisse autour de la prostate, ce qui facilite la miction."
  },
  {
   "drug": "levothyroxine",
@@ -269,7 +368,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Levothyroxine",
   "text_uk": "Левотироксин — це лабораторна копія тироксину (Т4), гормону, який природно виробляє щитоподібна залоза.",
-  "text_pl": "Lewotyroksyna to laboratoryjna kopia tyroksyny (T4), hormonu naturalnie wytwarzanego przez tarczycę."
+  "text_pl": "Lewotyroksyna to laboratoryjna kopia tyroksyny (T4), hormonu naturalnie wytwarzanego przez tarczycę.",
+  "text_cs": "Levothyroxin je laboratorně vyrobená kopie tyroxinu (T4), hormonu, který přirozeně tvoří štítná žláza.",
+  "text_es": "La levotiroxina es una copia fabricada en laboratorio de la tiroxina (T4), la hormona que produce la glándula tiroides de forma natural.",
+  "text_fr": "La lévothyroxine est une copie fabriquée en laboratoire de la thyroxine (T4), l'hormone produite naturellement par la thyroïde."
  },
  {
   "drug": "zolpidem",
@@ -277,7 +379,10 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Z-drug",
   "text_uk": "Золпідем належить до «Z-препаратів» — групи снодійних, назви яких просто починаються на Z.",
-  "text_pl": "Zolpidem należy do „leków Z”, grupy leków nasennych, których nazwy po prostu zaczynają się na Z."
+  "text_pl": "Zolpidem należy do „leków Z”, grupy leków nasennych, których nazwy po prostu zaczynają się na Z.",
+  "text_cs": "Zolpidem patří mezi „Z-léky“, skupinu léků na spaní, jejichž názvy shodou okolností začínají na Z.",
+  "text_es": "El zolpidem es uno de los «fármacos Z», un grupo de medicamentos para dormir cuyos nombres casualmente empiezan por Z.",
+  "text_fr": "Le zolpidem fait partie des « Z-drugs », un groupe de somnifères dont les noms commencent par hasard par un Z."
  },
  {
   "drug": "montelukast",
@@ -285,6 +390,9 @@
   "source": "Wikipedia",
   "url": "https://en.wikipedia.org/wiki/Montelukast",
   "text_uk": "Монтелукаст блокує лейкотрієни — запальні сигнальні молекули, які звужують дихальні шляхи при астмі.",
-  "text_pl": "Montelukast blokuje leukotrieny, zapalne cząsteczki sygnałowe, które zwężają drogi oddechowe w astmie."
+  "text_pl": "Montelukast blokuje leukotrieny, zapalne cząsteczki sygnałowe, które zwężają drogi oddechowe w astmie.",
+  "text_cs": "Montelukast působí blokováním leukotrienů, zánětlivých přenašečů, které při astmatu stahují dýchací cesty.",
+  "text_es": "El montelukast actúa bloqueando los leucotrienos, mensajeros inflamatorios que estrechan las vías respiratorias en el asma.",
+  "text_fr": "Le montélukast agit en bloquant les leucotriènes, des messagers inflammatoires qui resserrent les voies respiratoires dans l'asthme."
  }
 ]
