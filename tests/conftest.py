@@ -36,3 +36,15 @@ def fake_labels(tmp_path, monkeypatch):
     yield
     for fn in (rag.drug_aliases, rag.drug_brands):
         fn.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def fresh_rate_limits():
+    """Every test starts with empty question counters (group 7d): all tests come from the same test address,
+    so without this the 11th question of the whole run would get "429 too many"."""
+    from app import limits, spam
+    limits.ask_limiter.reset()
+    spam.reset()  # group 7e: report counters (per visitor, daily total, same-text memory)
+    yield
+    limits.ask_limiter.reset()
+    spam.reset()

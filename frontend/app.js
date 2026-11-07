@@ -108,6 +108,13 @@ async function ask(question) {
     lastExchange = { question, market: $("#market").value, answer_language: $("#answerLang").value, mode,
                      answer: data.answer, model: data.model, sources: (data.sources || []).map((s) => `${s.drug} · ${s.section} · ${s.url}`) };
     answerEl.innerHTML = renderAnswer(data.answer);
+    // Orange-level situation (missed/late dose...): fixed safety line from the server, under the answer.
+    if (data.safety_note) answerEl.insertAdjacentHTML("beforeend", `<p class="safety-note">${esc(data.safety_note)}</p>`);
+    // Red card shown while the AI is down: let the user retry once it's back.
+    if (data.llm_unavailable) {
+      answerEl.insertAdjacentHTML("beforeend", `<button type="button" class="retry">${t("retry")}</button>`);
+      answerEl.querySelector(".retry").onclick = () => ask(question);
+    }
     answerEl.classList.toggle("notfound", mode === "none");
     answerEl.classList.toggle("playful", mode === "playful");
     answerEl.classList.toggle("emergency", mode === "emergency");
@@ -262,7 +269,8 @@ $("#dataDialog").addEventListener("click", (e) => { if (e.target.id === "dataDia
 
 // ----- "Report a problem": the message goes to the server, which e-mails it to the owner -----
 const repDlg = $("#reportDialog");
-$("#reportBtn").onclick = () => { $("#repStatus").textContent = ""; repDlg.showModal(); $("#repMsg").focus(); };
+let repOpenedAt = 0;  // when the form was opened: the server treats a report sent in under 3 s as a bot
+$("#reportBtn").onclick = () => { repOpenedAt = performance.now(); $("#repStatus").textContent = ""; repDlg.showModal(); $("#repMsg").focus(); };
 $("#closeReport").onclick = () => repDlg.close();
 repDlg.addEventListener("click", (e) => { if (e.target === repDlg) repDlg.close(); });
 const readImage = (file) => new Promise((ok, fail) => {
@@ -280,7 +288,7 @@ $("#reportForm").addEventListener("submit", async (e) => {
     const r = await fetch(`${API}/api/feedback`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: $("#repMsg").value, contact: $("#repContact").value, context, image,
-                             website: $("#repWebsite").value }),
+                             website: $("#repWebsite").value, form_ms: Math.round(performance.now() - repOpenedAt) }),
     });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
     $("#repStatus").textContent = t("reportThanks");

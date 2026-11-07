@@ -5,11 +5,10 @@ PharmaRAG promises: question in any language, answer in the chosen language, and
 citizen. Each test names the mistake it catches.
 """
 import re
-import typing
 
 import pytest
 
-from app import main, rag
+from app import inputs, rag
 
 ALL = sorted(rag.LANGUAGES)  # ["cs", "en", "es", "fr", "pl", "uk"]
 
@@ -152,13 +151,13 @@ def test_auto_answer_language_follows_the_question(pipeline, question, lang):
 def test_auto_with_undecidable_question_lets_the_llm_mirror_the_user(pipeline):
     """Catches: a bare "Nurofen alkohol" question being answered in English by default."""
     rag.ask("Nurofen alkohol", answer_language="auto", market="pl")
-    assert "Write the answer in the same language as the user's question." in pipeline["prompts"][-1]
+    assert "Write the answer in the same language as the user's question." in [p for p in pipeline["prompts"] if p.startswith("Sources:")][-1]
 
 
 # ---------- API and UI stay in sync with LANGUAGES ----------
 def test_api_accepts_exactly_the_supported_languages():
     """Catches: adding a language to rag.LANGUAGES but not to the FastAPI Literal (or vice versa)."""
-    ask_langs = set(typing.get_args(main.AskRequest.model_fields["answer_language"].annotation))
+    ask_langs = set(inputs.ANSWER_LANGUAGES)  # 7b: was the FastAPI Literal, now the list in app/inputs.py
     assert ask_langs == set(ALL) | {"auto"}
 
 

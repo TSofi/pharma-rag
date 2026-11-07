@@ -14,12 +14,21 @@ Rules:
 - Cite every factual sentence with the source number in plain ASCII square brackets, e.g. [1] or [2][3].
   Cite each source separately: [2][3], never [2-3] or [2, 3]. Cite only the 1-3 sources that really
   contain the fact, not all of them. Never use any other citation style (no 【】, no line ranges).
-- If the sources do not contain the answer, reply exactly: "NOT_FOUND" and nothing else.
+- If the sources do not contain the answer, the answer part is exactly: "NOT_FOUND" and nothing else.
 - Do not use outside knowledge. Do not guess doses, indications or interactions.
 - Be concise: 2-6 sentences or a short bullet list. Use plain, professional language.
 - The sources may be in English, Polish or Ukrainian, and the answer may be requested in another
   language. Translating the facts is expected and is NOT a reason to reply NOT_FOUND.
-  Keep drug names and numbers exact."""
+  Keep drug names and numbers exact.
+- ALWAYS start the reply with one line saying how urgent the user's situation is, then the answer on the
+  next line:
+  RISK: EMERGENCY -> something has ALREADY happened that can be dangerous: much more than the allowed dose
+    was taken, a child swallowed medicine by accident, poisoning, a severe allergic reaction, trouble
+    breathing, chest pain, fainting, or any self-harm.
+  RISK: CAUTION -> a dosing mistake or "what if" that is usually not an emergency: a missed, late or
+    doubled dose, mixed-up times, "what happens if I take...".
+  RISK: NONE -> everything else, including using a medicine the way a doctor said (e.g. crushing a
+    tablet into food)."""
 
 SAME_SUBSTANCE_NOTE = """
 Note: the user asks about {asked}. The sources are from the leaflet of {reps}, a product with the same
@@ -86,6 +95,102 @@ EMERGENCY = {
     "fr": "Il peut s'agir d'une urgence. Appelez immédiatement le 112 (ou le 15, SAMU) "
           "ou un centre antipoison. N'attendez pas une réponse en ligne.",
 }
+# Orange-level ("CAUTION") safety line shown under a leaflet answer. Fixed text, never generated.
+SAFETY_NOTE = {
+    "en": "If you feel unwell or are not sure what to do, contact your doctor or pharmacist. "
+          "In an emergency call 112 (911 in the US).",
+    "uk": "Якщо ви погано почуваєтеся або не впевнені, що робити, зверніться до лікаря чи фармацевта. "
+          "У невідкладному випадку телефонуйте 112 (103 в Україні).",
+    "pl": "Jeśli źle się czujesz lub nie wiesz, co zrobić, skontaktuj się z lekarzem lub farmaceutą. "
+          "W nagłym wypadku dzwoń pod 112.",
+    "cs": "Pokud se necítíte dobře nebo si nejste jistí, co dělat, obraťte se na lékaře nebo lékárníka. "
+          "V případě nouze volejte 112 (nebo 155).",
+    "es": "Si se encuentra mal o no sabe qué hacer, consulte a su médico o farmacéutico. "
+          "En caso de emergencia, llame al 112.",
+    "fr": "Si vous ne vous sentez pas bien ou avez un doute, contactez votre médecin ou votre pharmacien. "
+          "En cas d'urgence, appelez le 112 (ou le 15, SAMU).",
+}
+# Red card when the LLM is DOWN and the keywords look like an emergency. The keywords can't judge the
+# situation as well as the LLM, so the text is conditional ("if ...") and says the service is busy.
+EMERGENCY_SOFT = {
+    "en": "If someone has taken too much of a medicine, swallowed something harmful or has trouble breathing, "
+          "call 112 (911 in the US) or a poison control centre now. Our AI service is busy right now; "
+          "for other questions, please try again in a moment.",
+    "uk": "Якщо хтось прийняв забагато ліків, проковтнув щось шкідливе або має проблеми з диханням, негайно "
+          "телефонуйте 112 (103 в Україні) або в токсикологічний центр. Наш сервіс ШІ зараз перевантажений; "
+          "з іншими питаннями спробуйте ще раз трохи пізніше.",
+    "pl": "Jeśli ktoś przyjął za dużo leku, połknął coś szkodliwego lub ma trudności z oddychaniem, natychmiast "
+          "zadzwoń pod 112 lub do ośrodka toksykologicznego. Nasza usługa AI jest teraz przeciążona; "
+          "z innymi pytaniami spróbuj ponownie za chwilę.",
+    "cs": "Pokud někdo užil příliš mnoho léku, spolkl něco škodlivého nebo má potíže s dýcháním, okamžitě "
+          "volejte 112 (nebo 155) nebo Toxikologické informační středisko. Naše služba AI je teď přetížená; "
+          "s dalšími dotazy to prosím zkuste za chvíli znovu.",
+    "es": "Si alguien ha tomado demasiado de un medicamento, ha tragado algo dañino o tiene dificultad para "
+          "respirar, llame ahora al 112 o al Servicio de Información Toxicológica. Nuestro servicio de IA está "
+          "saturado en este momento; para otras preguntas, inténtelo de nuevo en un momento.",
+    "fr": "Si quelqu'un a pris trop d'un médicament, a avalé quelque chose de dangereux ou a du mal à respirer, "
+          "appelez immédiatement le 112 (ou le 15, SAMU) ou un centre antipoison. Notre service d'IA est "
+          "surchargé en ce moment ; pour les autres questions, réessayez dans un instant.",
+}
+
+# Keyword check, used ONLY when the LLM is down (when it works, the LLM judges the situation).
+# An emergency needs TWO signals: something was ALREADY taken (past tense, so "what if I take..." never
+# matches) AND a sign of too much (whole pack, by accident, 5+ tablets...). A few words are enough alone,
+# again only in the "already happened" form ("overdosed", not "overdose"). Hand-written: needs a check by
+# native speakers (like S7).
+_TAKEN = re.compile(r"""\b(?:
+    took|swallowed|drank|ate|ingested|(?:has|have|had|'ve)\s+(?:taken|swallowed|drunk|eaten)|got\s+into
+  | випи(?:в|ла|ли|ло)|проковтну(?:в|ла|ли|ло)|з['’ʼ]?ї(?:в|ла|ли|ло)|прийня(?:в|ла|ли|ло)
+  | połkn(?:ął|ęła|ęło|ęli|ęły)\w*|wzi(?:ął|ęła|ęło|ęli|ęły)\w*|zjad(?:ł|ła|ło|li|ły)\w*|wypi(?:ł|ła|ło|li|ły)\w*
+  | zaży(?:ł|ła|ło|li|ły)\w*|przyj(?:ął|ęła|ęło|ęli|ęły)\w*
+  | spolkl\w*|snědl\w*|vypil\w*|vzal\w*|užil\w*|požil\w*
+  | tom[éó]|(?:he|ha|han|has)\s+tomado|trag(?:ué|ó|aron)|tragad[oa]|beb(?:ió|í|ieron)|bebid[oa]|com(?:ió|ieron)|comid[oa]
+  | ingiri[óo]|inger(?:í|ido)
+  | (?:ai|a|as|avons|avez|ont)\s+(?:pris|bu)|avalée?s?|mangée?s?|ingérée?s?
+)\b""", re.I | re.X)
+_TOO_MUCH = re.compile(r"""(?:
+    \btoo\s+(?:many|much)\b|\b(?:whole|entire|full)\s+(?:pack|packet|box|bottle|strip|blister|sheet)\b
+  | \ball\s+(?:the|my|his|her|of\s+the)\s+(?:pills|tablets|capsules)\b
+  | \bby\s+(?:mistake|accident)\b|\baccidentally\b
+  | \b(?:[5-9]|[1-9]\d+)\s+(?:\w+\s+){0,2}?(?:pills?|tablets?|capsules?|таблет\w*|капсул\w*|tabletek|tabletki
+        |kapsułek|pigułek|tablet|tablety|tabletky|kapslí|kapsle|comprimidos?|pastillas?|cápsulas?|comprimés?
+        |gélules?|cachets?)\b
+  | \b(?:за|за\s?надто\s)багато\b|\b(?:всю|цілу|весь|цілий)?\s*(?:пачку|упаковку|пляшку|блістер|флакон|коробку)\b
+  | \bвипадково\b|\bпомилково\b
+  | \b(?:za|zbyt)\s+(?:dużo|wiele)\b|\bcał(?:e|ą|y)\s+(?:opakowanie|paczkę|butelkę|blister|listek|fiolkę|pudełko)\b
+  | \bprzez\s+pomyłkę\b|\bomyłkowo\b|\bprzypadk(?:iem|owo)\b
+  | \bpříliš\s+(?:mnoho|moc)\b|\bcel(?:é|ou|ý)\s+(?:balení|krabičku|lahev|láhev|plato|tubu)\b|\bomylem\b|\bnáhodou\b
+  | \bdemasiad[oa]s?\b|\btod[oa]\s+(?:la\s+caja|el\s+bl[ií]ster|el\s+frasco|la\s+botella|el\s+envase)\b
+  | \bpor\s+(?:error|equivocación|accidente)\b|\bsin\s+querer\b|\baccidentalmente\b
+  | \btrop\s+de\b|\btou(?:te|t)\s+(?:la\s+boîte|le\s+flacon|la\s+plaquette|la\s+bouteille|le\s+tube)\b
+  | \bpar\s+(?:erreur|accident|mégarde)\b|\baccidentellement\b
+)""", re.I | re.X)
+_ALREADY_BAD = re.compile(r"""\b(?:
+    overdosed|poisoned|unconscious|passed\s+out|not\s+breathing|stopped\s+breathing|can(?:no|')t\s+breathe
+  | передозува(?:в|ла|ли|ло)|отруї(?:вся|лася|лися|лось|в|ла|ли)|непритомн\w*|без\s+свідомості|не\s+дихає
+  | przedawkował\w*|zatru(?:ł|ła|li|ło)\w*|nieprzytomn\w*|nie\s+oddycha
+  | předávkoval\w*|otrávil\w*|v\s+bezvědomí|nedýchá
+  | intoxic(?:ó|ado|ada)|envenen(?:ó|ado|ada)|(?:tuvo|ha\s+tenido|he\s+tenido)\s+una\s+sobredosis|inconsciente|no\s+respira
+  | (?:fait|faite)\s+une\s+(?:overdose|surdose)|intoxiquée?|empoisonnée?|inconsciente?|ne\s+respire\s+(?:plus|pas)
+)\b""", re.I | re.X)
+
+
+def looks_like_emergency(question: str) -> bool:
+    """Keyword fallback for when the LLM can't judge (see the comment above)."""
+    return bool(_ALREADY_BAD.search(question) or (_TAKEN.search(question) and _TOO_MUCH.search(question)))
+
+
+RISK_LEVELS = ("none", "caution", "emergency")  # in order of urgency
+_RISK_LINE = re.compile(r"^[^\w\n]*RISK[^\w\n]*:?[^\w\n]*(EMERGENCY|CAUTION|NONE)[^\w\n]*$\n?", re.I | re.M)
+
+
+def split_risk(reply: str) -> tuple[str, str]:
+    """("RISK: CAUTION\nanswer") -> ("caution", "answer"). No risk line -> "none" (older/forgetful model)."""
+    found = [m.lower() for m in _RISK_LINE.findall(reply or "")]
+    level = max(found, key=RISK_LEVELS.index) if found else "none"
+    return level, _RISK_LINE.sub("", reply or "").strip()
+
+
 _PL_WORDS = {"jest", "czy", "jaka", "jaki", "jakie", "dawka", "dawkowanie", "lek", "leku", "można", "mozna",
              "się", "sie", "na", "przy", "ciąży", "ciazy", "skutki", "uboczne", "działa", "dziala", "dla",
              "przeciwwskazania", "dlaczego", "stosuje", "stosowac", "moge", "brac", "jak", "ile", "kiedy", "czym",
@@ -379,6 +484,8 @@ def fallback(question: str, out_lang: str) -> tuple[str, str]:
                              f"Question: {question}\n\nWrite any answer in {lang_name(out_lang)} "
                              f"(regardless of the question's language).").strip()
     except Exception:  # noqa: BLE001 -- the fallback is optional; never fail the request because of it
+        if looks_like_emergency(question):  # the LLM can't judge: keywords decide (soft red card)
+            return EMERGENCY_SOFT.get(out_lang, EMERGENCY_SOFT["en"]), "emergency"
         return NOT_FOUND.get(out_lang, NOT_FOUND["en"]), "none"
     head = reply[:20].upper()
     if "EMERGENCY" in head:
@@ -392,9 +499,270 @@ def fallback(question: str, out_lang: str) -> tuple[str, str]:
     return NOT_FOUND.get(out_lang, NOT_FOUND["en"]), "none"
 
 
+REPAIR_NOTE = """
+
+Your previous answer (below) had no valid citation. Rewrite it so that EVERY factual sentence cites
+the number of the source it comes from, e.g. [1] or [2][3]. Keep only facts that are in the sources.
+If the sources do not support the answer, reply exactly: NOT_FOUND
+Previous answer:
+{answer}"""
+
+
+def _cite(answer: str, n_sources: int) -> tuple[str, set[int]]:
+    """Normalise citation styles, drop numbers that point to no source, return (text, cited numbers)."""
+    answer = normalize_citations(answer, n_sources)
+    answer = re.sub(r"\[(\d+)\]", lambda m: m.group(0) if 1 <= int(m.group(1)) <= n_sources else "", answer)
+    answer = re.sub(r"\s+([.,;:!?])", r"\1", answer)
+    return answer, {int(n) for n in re.findall(r"\[(\d+)\]", answer)}
+
+
+NUMBERS_NOTE = """
+
+Your previous answer (below) contains numbers that are NOT in the source it cites: {problems}.
+Rewrite it: copy every number (dose, strength, interval, duration, age, percentage) exactly as it is in
+the source you cite, and cite that source. Do not convert units. If no source contains the number, leave
+it out, or reply exactly: NOT_FOUND
+Previous answer:
+{answer}"""
+
+# Number words that leaflets use instead of digits ("dwie tabletki", "half a tablet"). Only the SOURCE side
+# uses them (so "2 tablets" in the answer matches "dwie tabletki"); in the answer only digits are checked.
+_NUMBER_WORDS = {
+    0.5: "half halves ½ pół połowa połowę połowy половина половину половини півтаблетки půl polovina polovinu "
+         "media medio mitad moitié demi demie",
+    1: "one once jeden jedna jedną jedno jednej jednego один одна одну одне одного однієї раз jednu un une uno una",
+    2: "two twice dwa dwie dwóch dwukrotnie два дві двох двічі dva dvě dvou dvakrát dos deux",
+    3: "three trzy trzech trzykrotnie три трьох тричі tři tří třikrát tres trois",
+    4: "four cztery czterech чотири чотирьох čtyři čtyř cuatro quatre",
+    5: "five pięć pięciu п'ять п’ять пʼять пяти п'яти pět cinco cinq",
+    6: "six sześć sześciu шість шести šest seis",
+    7: "seven siedem siedmiu сім семи sedm siete sept",
+    8: "eight osiem ośmiu вісім восьми osm ocho huit",
+    9: "nine dziewięć dziewięciu дев'ять дев’ять devět nueve neuf",
+    10: "ten dziesięć dziesięciu десять десяти deset diez dix",
+    12: "twelve dwanaście дванадцять dvanáct doce douze",
+}
+_WORD_VALUE = {w: float(v) for v, words in _NUMBER_WORDS.items() for w in words.split()}
+# A number = digits, optionally with , or . parts and space-grouped thousands ("1 000"). Not glued to a
+# letter or digit before it, so "B12" and "CYP3A4" are names, not numbers.
+_NUMBER = re.compile(r"(?<!\w)\d+(?:[.,]\d+)*(?:[ \u00a0\u202f]\d{3}(?!\d))*")
+_LIST_NUMBER = re.compile(r"^\s*\d{1,2}[.)]\s+", re.M)  # "1. Take ..." is list numbering, not a fact
+
+# Units, so "1 g" in the leaflet also accepts "1000 mg" (and 1000000 mcg) in the answer: a number WITH a unit
+# is compared as an amount in the kind's base unit (mg, ml). unit -> (kind, size). Mass and volume never mix.
+_UNITS = {"mcg": ("mass", 0.001), "µg": ("mass", 0.001), "μg": ("mass", 0.001), "ug": ("mass", 0.001),
+          "мкг": ("mass", 0.001), "mg": ("mass", 1), "мг": ("mass", 1), "g": ("mass", 1000), "г": ("mass", 1000),
+          "kg": ("mass", 1e6), "кг": ("mass", 1e6), "ml": ("volume", 1), "мл": ("volume", 1),
+          "l": ("volume", 1000), "л": ("volume", 1000)}
+# a number right before a unit; the unit must end there ("2 glasses" is not "2 g")
+_AMOUNT = re.compile(r"(?<!\w)(\d+(?:[.,]\d+)*(?:[ \u00a0\u202f]\d{3}(?!\d))*)\s?"
+                     r"(mcg|µg|μg|ug|мкг|mg|мг|kg|кг|g|г|ml|мл|l|л)(?![^\W\d_])", re.I)
+
+
+def _values(token: str) -> set[float]:
+    """Possible values of one number as written: "2,5" -> 2.5; "1,000" -> 1000 or 1.0 (EN thousands or
+    an EU decimal); "1 000" -> 1000."""
+    t = re.sub(r"[ \u00a0\u202f]", "", token)
+    out = set()
+    if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+", t):
+        out.add(float(re.sub(r"[.,]", "", t)))
+    if re.fullmatch(r"\d+[.,]\d+", t):
+        out.add(float(t.replace(",", ".")))
+    if re.fullmatch(r"\d+", t):
+        out.add(float(t))
+    if not out:  # e.g. 1.2.3: its parts
+        out = {float(p) for p in re.split(r"[.,]", t) if p}
+    return out
+
+
+def _numbers_in(text: str, with_words: bool = False) -> set[float]:
+    found: set[float] = set()
+    for token in _NUMBER.findall(text):
+        found |= _values(token)
+        found |= {float(p) for p in re.split(r"[ \u00a0\u202f]", token) if p.isdigit()}  # "1 500" -> 1, 500 too
+    if with_words:  # the source side: also number words ("dwie" -> 2)
+        found |= {_WORD_VALUE[w] for w in re.findall(r"[^\W\d_]+(?:['’ʼ][^\W\d_]+)?|½", text.lower()) if w in _WORD_VALUE}
+    return found
+
+
+def _amounts(text: str) -> tuple[set[tuple[str, float]], dict[str, set[float]]]:
+    """(kind, amount in base unit) of every "number + unit", and per kind the raw numbers written with a
+    unit of that kind: "500 µg" -> {("mass", 0.5)}, {"mass": {500}}."""
+    amounts, raw = set(), {"mass": set(), "volume": set()}
+    for token, unit in _AMOUNT.findall(text):
+        kind, size = _UNITS[unit.lower()]
+        for value in _values(token):
+            amounts.add((kind, round(value * size, 6)))
+            raw[kind].add(value)
+    return amounts, raw
+
+
+def wrong_numbers(answer: str, sources: list[dict], allowed: str = "") -> list[dict]:
+    """Numbers of a cited sentence that are in none of the sources it cites. `allowed` = text whose numbers
+    may be repeated (the user's question). Returns [{"number", "cited", "found_in"}] (found_in = sources
+    that DO contain it: a wrong citation rather than a wrong number).
+    A number WITH a unit in the answer is compared as an amount: "1000 mg" matches "1 g", but "500 mg" does
+    not match "500 µg" and "1000 ml" does not match "1 g"."""
+    texts = [f"{c.get('drug', '')} {c.get('section', '')} {c.get('text', '')}" for c in sources]
+    per_source = [_numbers_in(t, with_words=True) for t in texts]
+    per_amounts = [_amounts(t) for t in texts]
+    ok_anyway = _numbers_in(allowed)
+
+    def supported(token: str, unit: str | None, ids: list[int]) -> bool:
+        whole = _values(token)
+        if unit:
+            kind, size = _UNITS[unit.lower()]
+            mine = {(kind, round(v * size, 6)) for v in whole}
+            for i in ids:
+                amounts, raw = per_amounts[i - 1]
+                if mine & amounts:
+                    return True  # the same amount, in any unit
+                if whole & per_source[i - 1] and not whole & raw[kind]:
+                    return True  # the number is in the leaflet without a unit of this kind ("Nurofen 400")
+            return bool(whole & ok_anyway)
+        have = set().union(*(per_source[i - 1] for i in ids)) | ok_anyway
+        parts = [p for p in re.split(r"[ \u00a0\u202f]", token) if p]
+        return bool(whole & have) or all(_values(p) & have for p in parts)
+
+    problems = []
+    for part in re.split(r"(?<=[.!?])\s+(?=[A-ZА-ЯІЇЄҐ¿¡])|\n+", _LIST_NUMBER.sub("", answer)):
+        cited = sorted({int(n) for n in re.findall(r"\[(\d+)\]", part) if 1 <= int(n) <= len(sources)})
+        if not cited:
+            continue  # uncited sentences are counted by uncited_sentences()
+        text = re.sub(r"\[\d+\]", " ", part)
+        units = {m.start(1): m.group(2) for m in _AMOUNT.finditer(text)}  # number position -> its unit
+        for m in _NUMBER.finditer(text):
+            token, unit = m.group(0), units.get(m.start())
+            if supported(token, unit, cited):
+                continue
+            problems.append({"number": token, "cited": cited,
+                             "found_in": [i for i in range(1, len(sources) + 1)
+                                          if i not in cited and supported(token, unit, [i])]})
+    return problems
+
+
+# ---------------------------------------------------------------- meaning check (the "judge")
+JUDGE_PROMPT = """You check a drug-information answer against the leaflet excerpts it cites.
+For each numbered claim decide, using ONLY the excerpts that claim cites:
+SUPPORTED - the excerpt says this. A translation into another language, a paraphrase or a shorter
+  summary counts as SUPPORTED.
+CONTRADICTED - the excerpt says something different or the opposite (e.g. "can be used" vs "do not
+  use", another dose, age, interval or duration).
+NOT_IN_SOURCE - the excerpt does not contain this information at all.
+Reply with one line per claim, exactly in this form and nothing else:
+1: SUPPORTED
+2: CONTRADICTED"""
+
+MEANING_NOTE = """
+
+A checker found that these sentences of your previous answer (below) do not match the source they cite:
+{problems}
+Rewrite the answer: say only what the cited sources say, with the same meaning (never turn "do not use"
+into "can be used" or the reverse), and cite them. If the sources do not answer the question, reply
+exactly: NOT_FOUND
+Previous answer:
+{answer}"""
+
+# Topics where a wrong "yes/no" is most dangerous (decision 1b). Hand-written for 6 languages: needs a check
+# by native speakers (like S9).
+_RISKY = re.compile(r"""(?:
+    pregnan|breast[-\s]?feed|nursing|lactat|\bchild|\bkids?\b|\bbab(?:y|ies)\b|infant|alcohol|\bdrunk\b|\bdrink
+  | \bdriv(?:e|es|ing)\b|machiner|\bother\s+(?:medicine|medication|drug|pill)|interact|together\s+with|allerg
+  | kidney|renal|liver|hepat
+  | вагітн|годуванн\w*\s+груд|грудн\w*\s+вигодов|лактац|дит(?:и|я|ин)|діт(?:ей|ям|ьми)|немовл|малюк|алкогол|спирт
+  | керуванн|за\s+кермом|водінн|механізм|інш\w+\s+лік|взаємоді|алерг|нирк|печінк
+  | ciąż|karmi\w*\s+piersi|laktac|dzieck|dzieci|niemowl|alkohol|prowadz\w*\s+(?:samoch|pojazd|auto)|maszyn
+  | inn\w*\s+lek|interakc|alergi|uczul|nerk|wątrob
+  | těhot|kojen|kojenc|děti|dítě|dětí|alkohol|řízen|řídit|stroj|jin\w*\s+lék|alergi|ledvin|jater|játr
+  | embaraz|lactancia|amamant|niñ[oa]|bebé|alcohol|conduc|máquinas|otros\s+medicamentos|interacci|alergi|riñ|hígado|hepát
+  | grossesse|enceinte|allait|enfant|bébé|nourrisson|alcool|conduire|conduite|machines|autres\s+médicaments
+  | interaction|allergi|\breins?\b|rénal|foie|hépat
+)""", re.I | re.X)
+
+
+def risky_topic(text: str) -> bool:
+    return bool(_RISKY.search(text) or _CHILD.search(text))
+
+
+def _cited_claims(answer: str, n_sources: int) -> list[tuple[str, list[int]]]:
+    """(sentence without [n] markers, the source numbers it cites) for every cited sentence."""
+    claims = []
+    for part in re.split(r"(?<=[.!?])\s+(?=[A-ZА-ЯІЇЄҐ¿¡])|\n+", answer):
+        ids = sorted({int(n) for n in re.findall(r"\[(\d+)\]", part) if 1 <= int(n) <= n_sources})
+        text = re.sub(r"\s+([.,;:!?])", r"\1", re.sub(r"\[\d+\]", "", part)).strip(" -*•")
+        if ids and re.search(r"\w", text):
+            claims.append((text, ids))
+    return claims
+
+
+_VERDICT = re.compile(r"^\W*(?:claim\s*)?(\d+)\W*?[\s:.)\-–]*\W*(SUPPORTED|CONTRADICTED|NOT[\s_-]*IN[\s_-]*SOURCE)",
+                      re.I | re.M)
+
+
+def parse_verdicts(reply: str, n_claims: int) -> dict[int, str]:
+    """"1: SUPPORTED\n2) contradicted" -> {1: "supported", 2: "contradicted"}; unreadable lines are skipped."""
+    out = {}
+    for num, verdict in _VERDICT.findall(reply or ""):
+        if 1 <= int(num) <= n_claims:
+            out[int(num)] = re.sub(r"[\s_-]+", "_", verdict.lower())
+    return out
+
+
+def judge(answer: str, sources: list[dict]) -> tuple[list[dict] | None, int]:
+    """Ask the judge about every cited sentence. Returns (problems, unsupported_count); problems is None
+    when the judge is down or its reply unreadable (decision 3a: the caller keeps the answer)."""
+    claims = _cited_claims(answer, len(sources))
+    if not claims:
+        return [], 0
+    used = sorted({i for _, ids in claims for i in ids})
+    excerpts = "\n\n".join(f"[{i}] {sources[i - 1].get('drug', '')} — {sources[i - 1].get('section', '')}\n"
+                            f"{sources[i - 1].get('text', '')}" for i in used)
+    listing = "\n".join(f"{k}. {text} (cites {''.join(f'[{i}]' for i in ids)})" for k, (text, ids) in enumerate(claims, 1))
+    try:
+        reply = llm.strip_reasoning(llm.generate(JUDGE_PROMPT, f"Excerpts:\n{excerpts}\n\nClaims:\n{listing}"))
+    except Exception as e:  # noqa: BLE001
+        print(f"[judge] unavailable: {type(e).__name__}: {e}", flush=True)
+        return None, 0
+    verdicts = parse_verdicts(reply, len(claims))
+    if not verdicts:
+        print(f"[judge] unreadable reply: {reply[:200]!r}", flush=True)
+        return None, 0
+    problems, unsupported = [], 0
+    for k, (text, ids) in enumerate(claims, 1):
+        v = verdicts.get(k)  # a claim the judge skipped is not treated as wrong
+        if v == "contradicted" or (v == "not_in_source" and config.JUDGE_STRICT):
+            problems.append({"sentence": text, "cited": ids, "verdict": v})
+        elif v == "not_in_source":
+            unsupported += 1
+    return problems, unsupported
+
+
 def ask(question: str, top_k: int | None = None, answer_language: str = "auto", market: str = "us") -> dict:
     """The question can be in any supported language; the MARKET decides which labels are searched,
-    and the answer is written in `answer_language` ("auto" = same language as the question)."""
+    and the answer is written in `answer_language` ("auto" = same language as the question).
+    All LLM calls for one question share one time budget (llm.request_scope)."""
+    with llm.request_scope():
+        try:
+            return _ask(question, top_k, answer_language, market)
+        except Exception as e:  # noqa: BLE001
+            if market not in MARKETS or not looks_like_emergency(question):
+                raise  # a normal question: the API answers 503 "busy, try again"
+            # The LLM (or search) is down and this looks like an emergency: never show just an error page.
+            print(json.dumps({"event": "emergency_without_llm", "error": type(e).__name__}), flush=True)
+            lang = detect_language(question)
+            out_lang = lang if answer_language == "auto" else answer_language
+            return {"answer": EMERGENCY_SOFT.get(out_lang, EMERGENCY_SOFT["en"]), "found": False,
+                    "mode": "emergency", "playful": False, "llm_unavailable": True, "sources": [],
+                    "equivalents": [], "detected_drugs": [], "corrections": [], "language": lang,
+                    "answer_language": out_lang, "market": market, "search_query": None, "model": "",
+                    "timings": {}}
+
+
+class _Emergency(Exception):
+    """The LLM marked the user's situation RISK: EMERGENCY."""
+
+
+def _ask(question: str, top_k: int | None, answer_language: str, market: str) -> dict:
     if market not in MARKETS:
         raise ValueError(f"Market '{market}' is not available yet")
     top_k = top_k or config.TOP_K
@@ -432,16 +800,23 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
         field, detected = "group", [m["asked"] for m in mentions]
     base = {"detected_drugs": detected, "corrections": corrections, "language": lang, "answer_language": out_lang,
             "market": market, "search_query": search_q if (lang != "en" and market == "us") else None}
+    state = {"risk": "none"}  # how urgent the LLM judged the situation (the RISK line of its reply)
+
     def finish(result: dict) -> dict:
         timings["total_ms"] = round((time.perf_counter() - t_start) * 1000)
-        print(json.dumps({"event": "ask", "lang": lang, "found": result["found"],
+        if result["mode"] == "emergency" and result["answer"] in EMERGENCY_SOFT.values():
+            result["llm_unavailable"] = True
+        if state["risk"] == "caution" and result["mode"] != "emergency":
+            result["safety_note"] = SAFETY_NOTE.get(out_lang, SAFETY_NOTE["en"])
+        print(json.dumps({"event": "ask", "lang": lang, "found": result["found"], "risk": state["risk"],
+                          "meaning_check": result.get("meaning_check"),
                           "uncited_sentences": result.get("uncited_sentences"), **timings}), flush=True)
         return {**result, "timings": timings}
 
     def not_found() -> dict:
         text, mode = timed("refusal_ms", lambda: fallback(question, out_lang))
         return finish({**base, "answer": text, "found": False, "mode": mode,
-                       "playful": mode == "playful", "sources": [], "model": llm.last_model_used})
+                       "playful": mode == "playful", "sources": [], "model": llm.model_used()})
 
     # 1) RETRIEVE
     # Hybrid retrieval: take more candidates from the vector search, then re-rank them with a small
@@ -465,33 +840,114 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
                                 "inn": inn.get("en") or inn.get("inn", ""), "form": inn.get("form", "")})
 
     # 2) AUGMENT + 3) GENERATE
-    def generate(language: str) -> str:
+    def generate(language: str, repair: str = "") -> str:
         msg = f"Sources:\n{build_context(relevant)}\n\nQuestion: {question}"
         if lang != "en" and search_q != question:
             msg += f"\n(English version of the question: {search_q})"
         for e in equivalents:
             msg += SAME_SUBSTANCE_NOTE.format(asked=e["asked"], reps=", ".join(e["reps"]), inn=e["inn"])
         msg += f"\n\nWrite the answer in {lang_name(language)}."
-        return timed("llm_ms", lambda: llm.generate(SYSTEM_PROMPT, msg)).strip()
+        msg += repair  # a repair note (missing citations / wrong numbers), or nothing
+        level, text = split_risk(llm.strip_reasoning(timed("llm_ms", lambda: llm.generate(SYSTEM_PROMPT, msg))))
+        if level == "emergency":
+            raise _Emergency
+        if level == "caution":
+            state["risk"] = "caution"
+        return text
 
-    answer = generate(out_lang)
-    if (not answer or "NOT_FOUND" in answer) and out_lang not in ("en", "auto"):
-        # Some (smaller) models refuse when answer language != source language. Fall back to:
-        # answer in English (same language as the sources), then translate that answer.
-        english = generate("en")
-        if english and "NOT_FOUND" not in english:
-            answer = timed("llm_ms", lambda: llm.generate(
-                TRANSLATE_ANSWER_PROMPT.format(language=lang_name(out_lang)), english)).strip()
+    def refused(text: str) -> bool:
+        return not text or "NOT_FOUND" in text
 
-    if not answer or "NOT_FOUND" in answer:
-        return not_found()
+    try:
+        written_in = out_lang
+        answer = generate(out_lang)
+        if refused(answer) and out_lang not in ("en", "auto"):
+            # Some (smaller) models refuse when answer language != source language. Fall back to:
+            # answer in English (same language as the sources), then translate that answer.
+            english = generate("en")
+            if not refused(english):
+                try:
+                    answer = split_risk(llm.strip_reasoning(timed("llm_ms", lambda: llm.generate(
+                        TRANSLATE_ANSWER_PROMPT.format(language=lang_name(out_lang)), english))))[1]
+                except Exception as e:  # noqa: BLE001 -- a cited English answer beats an error page
+                    print(f"[ask] translation failed, answering in English: {type(e).__name__}: {e}", flush=True)
+                    answer = ""
+                if _cite(english, len(relevant))[1] and not _cite(answer, len(relevant))[1]:
+                    answer, written_in = english, "en"  # the translation failed or lost every [n]
 
-    answer = normalize_citations(answer, len(relevant))
-    # Drop citations that point to non-existent sources (a small hallucination guard),
-    # then record which source numbers the model actually cited.
-    answer = re.sub(r"\[(\d+)\]", lambda m: m.group(0) if 1 <= int(m.group(1)) <= len(relevant) else "", answer)
-    answer = re.sub(r"\s+([.,;:!?])", r"\1", answer)
-    cited = {int(n) for n in re.findall(r"\[(\d+)\]", answer)}
+        if refused(answer):
+            return not_found()
+
+        # Drop citations that point to non-existent sources (a small hallucination guard),
+        # then record which source numbers the model actually cited.
+        answer, cited = _cite(answer, len(relevant))
+        if not cited:
+            # Violet = "confirmed by the leaflet", so an answer without a single valid [n] can't be shown as
+            # violet. One repair attempt; if it still has no citation, it goes the "not found" way (orange).
+            try:
+                repaired = generate(written_in, repair=REPAIR_NOTE.format(answer=answer))
+            except _Emergency:
+                raise
+            except Exception as e:  # noqa: BLE001
+                print(f"[ask] citation repair failed: {type(e).__name__}: {e}", flush=True)
+                repaired = ""
+            answer, cited = _cite(repaired, len(relevant)) if not refused(repaired) else ("", set())
+            if not cited:
+                print(json.dumps({"event": "uncited_answer_rejected", "lang": lang}), flush=True)
+                return not_found()
+
+        # The citations must be TRUE: every number of a cited sentence is in the source it cites.
+        # One repair attempt ("copy the numbers exactly"); still wrong -> not violet (decision "A").
+        allowed = f"{question} {search_q}"
+        problems = wrong_numbers(answer, relevant, allowed)
+        if problems:
+            note = ", ".join(f'"{p["number"]}" (you cited {"".join(f"[{i}]" for i in p["cited"])}'
+                             + (f'; it is in {"".join(f"[{i}]" for i in p["found_in"])}' if p["found_in"] else "")
+                             + ")" for p in problems)
+            try:
+                repaired = generate(written_in, repair=NUMBERS_NOTE.format(problems=note, answer=answer))
+            except _Emergency:
+                raise
+            except Exception as e:  # noqa: BLE001
+                print(f"[ask] number repair failed: {type(e).__name__}: {e}", flush=True)
+                repaired = ""
+            fixed, fixed_cited = _cite(repaired, len(relevant)) if not refused(repaired) else ("", set())
+            if not fixed_cited or wrong_numbers(fixed, relevant, allowed):
+                print(json.dumps({"event": "wrong_numbers_rejected", "lang": lang,
+                                  "numbers": [p["number"] for p in problems]}), flush=True)
+                return not_found()
+            answer, cited = fixed, fixed_cited
+
+        # The MEANING must match too (the "judge", a second LLM call): "safe in pregnancy [1]" while [1] says
+        # "do not use". Only on risky topics (JUDGE_MODE). Judge down -> keep the answer (decision 3a).
+        meaning, unsupported = "not_checked", 0
+        if config.JUDGE_MODE == "always" or (config.JUDGE_MODE == "risky" and risky_topic(f"{question} {search_q} {answer}")):
+            problems, unsupported = timed("judge_ms", lambda: judge(answer, relevant))
+            meaning = "unavailable" if problems is None else "passed"
+            if problems:
+                listing = "\n".join(f'- "{p["sentence"]}" ({p["verdict"].replace("_", " ")}: '
+                                     f'{"".join(f"[{i}]" for i in p["cited"])})' for p in problems)
+                try:
+                    repaired = generate(written_in, repair=MEANING_NOTE.format(problems=listing, answer=answer))
+                except _Emergency:
+                    raise
+                except Exception as e:  # noqa: BLE001 -- here the answer is KNOWN to be wrong: no fail-open
+                    print(f"[ask] meaning repair failed: {type(e).__name__}: {e}", flush=True)
+                    repaired = ""
+                fixed, fixed_cited = _cite(repaired, len(relevant)) if not refused(repaired) else ("", set())
+                again, unsupported = (timed("judge_ms", lambda: judge(fixed, relevant))
+                                      if fixed_cited and not wrong_numbers(fixed, relevant, allowed) else ([1], 0))
+                if again:  # still wrong (or no citations / wrong numbers); None = judge down -> keep the fix
+                    print(json.dumps({"event": "wrong_meaning_rejected", "lang": lang,
+                                      "sentences": [p["sentence"][:80] for p in problems]}), flush=True)
+                    return not_found()
+                answer, cited, meaning = fixed, fixed_cited, "repaired"
+    except _Emergency:
+        # Red card: fixed text, never generated; no leaflet answer next to it ("don't wait, call now").
+        state["risk"] = "emergency"
+        return finish({**base, "answer": EMERGENCY.get(out_lang, EMERGENCY["en"]), "found": False,
+                       "mode": "emergency", "playful": False, "sources": [], "model": llm.model_used()})
+
     uncited = uncited_sentences(answer)
     sources = [
         {"id": i, **{k: c.get(k, "") for k in ("drug", "section", "text", "url", "score", "effective_time",
@@ -499,5 +955,6 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
          "brands": drug_brands().get(c["drug"], []) if field == "drug" else [], "cited": i in cited}
         for i, c in enumerate(relevant, start=1)
     ]
-    return finish({**base, "answer": answer, "found": True, "mode": "sourced", "sources": sources,
-                   "equivalents": equivalents, "model": llm.last_model_used, "uncited_sentences": uncited})
+    return finish({**base, "answer_language": written_in, "answer": answer, "found": True, "mode": "sourced",
+                   "sources": sources, "meaning_check": meaning, "unsupported_sentences": unsupported,
+                   "equivalents": equivalents, "model": llm.model_used(), "uncited_sentences": uncited})

@@ -2,21 +2,27 @@
 The owner's address and the API key stay on the server; the browser only talks to /api/feedback."""
 import base64
 import re
-import time
 
 import httpx
 
 from . import config
 
 MAX_IMAGE_BYTES = 4 * 1024 * 1024
-_recent: dict[str, list[float]] = {}  # ip -> timestamps (tiny in-memory rate limit against spam)
+# Spam checks and limits (how many reports, how fast, same text again) live in app/spam.py.
 
 
-def allowed(ip: str, per_hour: int = 5) -> bool:
-    now = time.time()
-    hits = [t for t in _recent.get(ip, []) if now - t < 3600]
-    _recent[ip] = hits + [now]
-    return len(hits) < per_hour
+def is_real_image(kind: str, raw: bytes) -> bool:
+    """The first bytes of every image format are fixed ("magic numbers"): a file that only CLAIMS to be a
+    PNG (an HTML page, a program...) doesn't start with them."""
+    if kind == "png":
+        return raw.startswith(b"\x89PNG\r\n\x1a\n")
+    if kind in ("jpg", "jpeg"):
+        return raw.startswith(b"\xff\xd8\xff")
+    if kind == "gif":
+        return raw.startswith((b"GIF87a", b"GIF89a"))
+    if kind == "webp":
+        return raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"
+    return False
 
 
 def send(message: str, contact: str, context: str, image: str | None) -> None:
@@ -34,6 +40,8 @@ def send(message: str, contact: str, context: str, image: str | None) -> None:
         raw = base64.b64decode(m.group(2), validate=True)
         if len(raw) > MAX_IMAGE_BYTES:
             raise ValueError("screenshot is larger than 4 MB")
+        if not is_real_image(m.group(1), raw):
+            raise ValueError("screenshot is not a real PNG, JPEG, WEBP or GIF image")
         payload["attachments"] = [{"filename": f"screenshot.{m.group(1)}", "content": m.group(2)}]
     r = httpx.post("https://api.resend.com/emails", json=payload, timeout=20,
                    headers={"Authorization": f"Bearer {config.RESEND_API_KEY}"})

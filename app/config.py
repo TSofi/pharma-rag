@@ -21,7 +21,15 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 # How much the model "thinks" before answering: minimal | low | medium | high. Grounded Q&A over
 # provided sources doesn't need deep reasoning, and thinking is the biggest source of latency.
 GEMINI_THINKING = os.getenv("GEMINI_THINKING", "low").upper()
-LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "30"))  # per LLM call; avoids 2-minute hangs
+LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "30"))  # per Gemini/Anthropic call; avoids 2-minute hangs
+GROQ_TIMEOUT_S = float(os.getenv("GROQ_TIMEOUT_S", "12"))  # Groq normally answers in 1-2 s; 12 s = it's stuck
+LLM_DEADLINE_S = float(os.getenv("LLM_DEADLINE_S", "30"))  # all LLM calls of ONE question together, then "busy"
+# Meaning check: a second LLM call (the "judge") checks that each cited sentence says what its source says.
+# risky = only when the question/answer touches pregnancy, breastfeeding, children, alcohol, driving, other
+# medicines, allergy, kidney/liver | always | off
+JUDGE_MODE = os.getenv("JUDGE_MODE", "risky").strip().lower()
+# true = a sentence the source doesn't contain (NOT_IN_SOURCE) is a problem like a contradiction
+JUDGE_STRICT = os.getenv("JUDGE_STRICT", "true").strip().lower() in ("1", "true", "yes", "on")
 GEMINI_FALLBACK_MODELS = [m.strip() for m in os.getenv("GEMINI_FALLBACK_MODELS", "").split(",") if m.strip()]
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
@@ -77,5 +85,11 @@ FEEDBACK_TO = os.getenv("FEEDBACK_TO", "")
 # --- Web ----------------------------------------------------------------------
 # Comma-separated list of frontend origins allowed to call the API (e.g. your Vercel URL).
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
+# Questions per visitor (app/limits.py); 0 = off (default: off until the client IP behind Render's proxy is confirmed; suggested 10 / 200). Each question costs up to 4-5 LLM calls on the free keys.
+ASK_LIMIT_PER_MINUTE = int(os.getenv("ASK_LIMIT_PER_MINUTE", "0"))
+ASK_LIMIT_PER_DAY = int(os.getenv("ASK_LIMIT_PER_DAY", "0"))
+# "Report a problem" form (app/spam.py); 0 = off. Resend's free plan: 100 e-mails a day, 3,000 a month.
+FEEDBACK_LIMIT_PER_HOUR = int(os.getenv("FEEDBACK_LIMIT_PER_HOUR", "5"))   # per visitor
+FEEDBACK_LIMIT_PER_DAY = int(os.getenv("FEEDBACK_LIMIT_PER_DAY", "90"))    # all visitors together
 
 DATA_FILE = ROOT / "data" / "labels.jsonl"

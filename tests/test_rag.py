@@ -63,7 +63,7 @@ def test_giant_sentence_is_hard_split():
 # ---------- the full ask() with the vector DB and LLM mocked ----------
 @pytest.fixture
 def mocked_pipeline(monkeypatch):
-    chunk = {"drug": "metformin", "section": "Indications and Usage", "text": "Metformin is indicated...",
+    chunk = {"drug": "metformin", "section": "Indications and Usage", "text": "Metformin is indicated for type 2 diabetes; 2.5 mg daily.",
              "url": "u", "score": 0.9, "effective_time": "20251101"}
     monkeypatch.setattr(rag.store, "search", lambda q, top_k, drugs=None, timings=None, **kw: [chunk, {**chunk, "score": 0.2}])
     calls = {}
@@ -288,7 +288,7 @@ def test_rerank_prefers_passages_with_question_keywords():
 # ---------- "Report a problem" form ----------
 def test_feedback_is_mailed_without_exposing_the_address(monkeypatch):
     from fastapi.testclient import TestClient
-    from app import config, feedback, main
+    from app import config, feedback, main, spam
     monkeypatch.setattr(config, "RESEND_API_KEY", "key")
     monkeypatch.setattr(config, "FEEDBACK_TO", "owner@example.com")
     sent = {}
@@ -296,12 +296,14 @@ def test_feedback_is_mailed_without_exposing_the_address(monkeypatch):
     class R:
         status_code = 200
     monkeypatch.setattr(feedback.httpx, "post", lambda url, json, timeout, headers: sent.update(json) or R())
-    feedback._recent.clear()
+    spam.reset()
     c = TestClient(main.app)
     png = "data:image/png;base64,iVBORw0KGgo="
-    r = c.post("/api/feedback", json={"message": "Wrong answer about Ibuprom", "contact": "me@x.io", "image": png})
+    r = c.post("/api/feedback", json={"message": "Wrong answer about Ibuprom", "contact": "me@x.io", "image": png,
+                                      "form_ms": 20_000})
     assert r.status_code == 200 and sent["to"] == ["owner@example.com"] and sent["reply_to"] == "me@x.io"
     assert sent["attachments"][0]["filename"] == "screenshot.png"
     assert "owner@example.com" not in r.text
-    assert c.post("/api/feedback", json={"message": "hello there", "image": "data:text/html;base64,AAAA"}).status_code == 400
+    assert c.post("/api/feedback", json={"message": "hello there", "image": "data:text/html;base64,AAAA",
+                                       "form_ms": 20_000}).status_code == 400
     assert c.post("/api/feedback", json={"message": "spam spam", "website": "x"}).json() == {"ok": True}

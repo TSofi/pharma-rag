@@ -276,6 +276,7 @@ body { background: var(--bg); }
 .mode-sourced .answer-body .cite { background: var(--src); color: var(--surface); }
 .src .cite { background: var(--src); color: var(--surface); }
 .answer-body.emergency { color: var(--sos); font-weight: 600; }
+.safety-note { margin: 12px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--sos-soft); color: var(--ink); font-size: 14px; }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
 .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; vertical-align: 0; }
 .legend .l-src::before { background: var(--src); }
