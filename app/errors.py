@@ -1,21 +1,22 @@
 """One shape and an exact HTTP number for every error the API returns.
 
-    {"detail": "<short readable text>", "error": "<CODE>", "field": "<which field>" (400 only)}
+    {"detail": "<short readable text>", "error": "<CODE>", "request_id": "<id>", "field": "<which field>" (400 only)}
 
     400 the request is broken or wrong (bad JSON, missing/too long/wrong field)   -> the user can fix it
+    401 a token is missing or wrong (only /api/metrics)
     404 unknown address            405 right address, wrong method (GET instead of POST)
     413 the request is too big     429 too many requests, wait (Retry-After header)
     500 a bug on our side          502 a service we depend on failed (Qdrant, LLM, e-mail)
     503 busy / not set up, try again later
 
 Rules: `detail` is always a string (the frontend shows it), the user's input is never sent back, and
-internal details (exception text, URLs, keys) go to the log only.
+internal details (exception text, URLs, keys) go to the log only. `request_id` is the same id as in the
+X-Request-ID header and the log (app/observability.py), so a user's report can be matched to the log line.
 `install(app)` wires everything in; call it BEFORE adding CORS so error answers still carry CORS headers.
 """
 import json
 import re
 import traceback
-import uuid
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -23,13 +24,15 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Route
 
+from . import observability
+
 # Biggest request body we accept, in bytes. A question is <= 500 characters; a report can carry a
 # screenshot of up to 4 MB, which is ~5.6 MB as base64 text, plus message and context.
 MAX_BODY_DEFAULT = 16 * 1024
 MAX_BODY = {"/api/feedback": 6_500_000}
 
 # Default code for each HTTP number (used when the code that raised the error didn't choose one).
-_CODES = {400: "BAD_REQUEST", 404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED", 413: "TOO_LARGE",
+_CODES = {400: "BAD_REQUEST", 401: "UNAUTHORIZED", 404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED", 413: "TOO_LARGE",
           429: "RATE_LIMITED", 500: "INTERNAL_ERROR", 502: "UPSTREAM_ERROR", 503: "UNAVAILABLE"}
 
 
@@ -50,6 +53,10 @@ class ApiError(StarletteHTTPException):
 
 
 def error_response(status: int, code: str, detail: str, headers: dict | None = None, **extra) -> JSONResponse:
+    observability.note(error=code)  # the error code goes into the request's final log line
+    request_id = extra.pop("request_id", None) or observability.current_id()
+    if request_id:
+        extra["request_id"] = request_id
     return JSONResponse({"detail": detail, "error": code, **extra}, status_code=status, headers=headers)
 
 
@@ -180,9 +187,9 @@ class CatchCrashes:
         try:
             await self.app(scope, receive, watch_send)
         except Exception:  # noqa: BLE001 -- that's the point: nothing unexpected reaches the user raw
-            request_id = uuid.uuid4().hex[:12]
-            print(f"[api] error {request_id} on {scope['method']} {scope['path']}\n{traceback.format_exc()}",
-                  flush=True)
+            request_id = observability.current_id() or observability.new_id()  # same id as the log line
+            observability.log_event("crash", request_id=request_id, method=scope["method"], path=scope["path"],
+                                    status=500, traceback=traceback.format_exc())
             if started:  # half an answer is already on its way: nothing better we can do
                 raise
             await error_response(500, "INTERNAL_ERROR",

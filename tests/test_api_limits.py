@@ -208,7 +208,7 @@ def test_other_addresses_are_not_limited(client):
     try:
         h = {"X-Forwarded-For": "203.0.113.7"}
         for _ in range(12):                # more than the 10 questions a minute
-            assert client.get("/api/health", headers=h).status_code == 200
+            assert client.get("/api/health", headers=h).status_code != 429  # honest 503 here: Qdrant is off
             assert client.get("/api/drugs?market=pl", headers=h).status_code == 200
             assert client.get("/api/fact?lang=pl", headers=h).status_code == 200
         assert ask(client, "203.0.113.7").status_code == 200

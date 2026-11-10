@@ -6,7 +6,7 @@ import re
 import time
 from functools import lru_cache
 
-from . import config, llm, markets, store
+from . import config, llm, markets, observability, store
 
 SYSTEM_PROMPT = """You are a drug-information assistant for pharmacists.
 Answer ONLY using the numbered sources provided (excerpts from official drug labels / patient leaflets).
@@ -483,7 +483,10 @@ def fallback(question: str, out_lang: str) -> tuple[str, str]:
         reply = llm.generate(TRIAGE_PROMPT.format(language=lang_name(out_lang)),
                              f"Question: {question}\n\nWrite any answer in {lang_name(out_lang)} "
                              f"(regardless of the question's language).").strip()
-    except Exception:  # noqa: BLE001 -- the fallback is optional; never fail the request because of it
+    except Exception as e:  # noqa: BLE001 -- the fallback is optional; never fail the request because of it
+        # Logged (was silent): the user now gets the plain "not found" only because the LLM failed, so this
+        # answer must not be cached (app/cache.py) and counts as an issue in the metrics.
+        observability.log_event("fallback_failed", error=f"{type(e).__name__}: {e}")
         if looks_like_emergency(question):  # the LLM can't judge: keywords decide (soft red card)
             return EMERGENCY_SOFT.get(out_lang, EMERGENCY_SOFT["en"]), "emergency"
         return NOT_FOUND.get(out_lang, NOT_FOUND["en"]), "none"
@@ -721,11 +724,11 @@ def judge(answer: str, sources: list[dict]) -> tuple[list[dict] | None, int]:
     try:
         reply = llm.strip_reasoning(llm.generate(JUDGE_PROMPT, f"Excerpts:\n{excerpts}\n\nClaims:\n{listing}"))
     except Exception as e:  # noqa: BLE001
-        print(f"[judge] unavailable: {type(e).__name__}: {e}", flush=True)
+        observability.log_event("judge_unavailable", error=f"{type(e).__name__}: {e}")
         return None, 0
     verdicts = parse_verdicts(reply, len(claims))
     if not verdicts:
-        print(f"[judge] unreadable reply: {reply[:200]!r}", flush=True)
+        observability.log_event("judge_unreadable", reply=reply[:200])
         return None, 0
     problems, unsupported = [], 0
     for k, (text, ids) in enumerate(claims, 1):
@@ -748,9 +751,11 @@ def ask(question: str, top_k: int | None = None, answer_language: str = "auto", 
             if market not in MARKETS or not looks_like_emergency(question):
                 raise  # a normal question: the API answers 503 "busy, try again"
             # The LLM (or search) is down and this looks like an emergency: never show just an error page.
-            print(json.dumps({"event": "emergency_without_llm", "error": type(e).__name__}), flush=True)
+            observability.log_event("emergency_without_llm", error=type(e).__name__)
             lang = detect_language(question)
             out_lang = lang if answer_language == "auto" else answer_language
+            observability.note(language=lang, answer_language=out_lang, found=False, mode="emergency",
+                               risk="emergency", llm_unavailable=True)
             return {"answer": EMERGENCY_SOFT.get(out_lang, EMERGENCY_SOFT["en"]), "found": False,
                     "mode": "emergency", "playful": False, "llm_unavailable": True, "sources": [],
                     "equivalents": [], "detected_drugs": [], "corrections": [], "language": lang,
@@ -808,9 +813,16 @@ def _ask(question: str, top_k: int | None, answer_language: str, market: str) ->
             result["llm_unavailable"] = True
         if state["risk"] == "caution" and result["mode"] != "emergency":
             result["safety_note"] = SAFETY_NOTE.get(out_lang, SAFETY_NOTE["en"])
-        print(json.dumps({"event": "ask", "lang": lang, "found": result["found"], "risk": state["risk"],
-                          "meaning_check": result.get("meaning_check"),
-                          "uncited_sentences": result.get("uncited_sentences"), **timings}), flush=True)
+        summary = {"language": lang, "answer_language": result.get("answer_language", out_lang),
+                   "detected_drugs": result.get("detected_drugs", []), "found": result["found"],
+                   "mode": result["mode"], "risk": state["risk"], "model": result.get("model", ""),
+                   "meaning_check": result.get("meaning_check"),
+                   "uncited_sentences": result.get("uncited_sentences"), "timings": dict(timings)}
+        if result.get("llm_unavailable"):
+            summary["llm_unavailable"] = True
+        # Inside an API request these fields go into its ONE final log line; from scripts: a line of its own.
+        if not observability.note(**summary):
+            observability.log_event("ask", **summary)
         return {**result, "timings": timings}
 
     def not_found() -> dict:
@@ -870,7 +882,7 @@ def _ask(question: str, top_k: int | None, answer_language: str, market: str) ->
                     answer = split_risk(llm.strip_reasoning(timed("llm_ms", lambda: llm.generate(
                         TRANSLATE_ANSWER_PROMPT.format(language=lang_name(out_lang)), english))))[1]
                 except Exception as e:  # noqa: BLE001 -- a cited English answer beats an error page
-                    print(f"[ask] translation failed, answering in English: {type(e).__name__}: {e}", flush=True)
+                    observability.log_event("translation_failed", error=f"{type(e).__name__}: {e}")
                     answer = ""
                 if _cite(english, len(relevant))[1] and not _cite(answer, len(relevant))[1]:
                     answer, written_in = english, "en"  # the translation failed or lost every [n]
@@ -889,11 +901,11 @@ def _ask(question: str, top_k: int | None, answer_language: str, market: str) ->
             except _Emergency:
                 raise
             except Exception as e:  # noqa: BLE001
-                print(f"[ask] citation repair failed: {type(e).__name__}: {e}", flush=True)
+                observability.log_event("citation_repair_failed", error=f"{type(e).__name__}: {e}")
                 repaired = ""
             answer, cited = _cite(repaired, len(relevant)) if not refused(repaired) else ("", set())
             if not cited:
-                print(json.dumps({"event": "uncited_answer_rejected", "lang": lang}), flush=True)
+                observability.log_event("uncited_answer_rejected", lang=lang)
                 return not_found()
 
         # The citations must be TRUE: every number of a cited sentence is in the source it cites.
@@ -909,12 +921,12 @@ def _ask(question: str, top_k: int | None, answer_language: str, market: str) ->
             except _Emergency:
                 raise
             except Exception as e:  # noqa: BLE001
-                print(f"[ask] number repair failed: {type(e).__name__}: {e}", flush=True)
+                observability.log_event("number_repair_failed", error=f"{type(e).__name__}: {e}")
                 repaired = ""
             fixed, fixed_cited = _cite(repaired, len(relevant)) if not refused(repaired) else ("", set())
             if not fixed_cited or wrong_numbers(fixed, relevant, allowed):
-                print(json.dumps({"event": "wrong_numbers_rejected", "lang": lang,
-                                  "numbers": [p["number"] for p in problems]}), flush=True)
+                observability.log_event("wrong_numbers_rejected", lang=lang,
+                                        numbers=[p["number"] for p in problems])
                 return not_found()
             answer, cited = fixed, fixed_cited
 
@@ -932,14 +944,14 @@ def _ask(question: str, top_k: int | None, answer_language: str, market: str) ->
                 except _Emergency:
                     raise
                 except Exception as e:  # noqa: BLE001 -- here the answer is KNOWN to be wrong: no fail-open
-                    print(f"[ask] meaning repair failed: {type(e).__name__}: {e}", flush=True)
+                    observability.log_event("meaning_repair_failed", error=f"{type(e).__name__}: {e}")
                     repaired = ""
                 fixed, fixed_cited = _cite(repaired, len(relevant)) if not refused(repaired) else ("", set())
                 again, unsupported = (timed("judge_ms", lambda: judge(fixed, relevant))
                                       if fixed_cited and not wrong_numbers(fixed, relevant, allowed) else ([1], 0))
                 if again:  # still wrong (or no citations / wrong numbers); None = judge down -> keep the fix
-                    print(json.dumps({"event": "wrong_meaning_rejected", "lang": lang,
-                                      "sentences": [p["sentence"][:80] for p in problems]}), flush=True)
+                    observability.log_event("wrong_meaning_rejected", lang=lang,
+                                            sentences=[p["sentence"][:80] for p in problems])
                     return not_found()
                 answer, cited, meaning = fixed, fixed_cited, "repaired"
     except _Emergency:

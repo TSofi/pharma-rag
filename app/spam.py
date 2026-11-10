@@ -9,12 +9,11 @@ Resend's free plan allows 100 a day / 3,000 a month). 0 = that limit is off.
 Only e-mails really sent count. Everything lives in memory (reset on a server restart) and is bounded.
 """
 import hashlib
-import json
 import math
 import threading
 from collections import OrderedDict, deque
 
-from . import config, limits
+from . import config, limits, observability
 from .errors import ApiError
 
 MIN_FORM_MS = 3_000          # nobody reads the form and writes a report in under 3 s
@@ -54,7 +53,7 @@ def bot_reason(website: str, form_ms: int | None, visitor: str, message: str) ->
 
 
 def log_drop(reason: str, ip: str) -> None:
-    print(json.dumps({"event": "report_dropped", "reason": reason, "visitor": limits.mask(ip)}), flush=True)
+    observability.log_event("report_dropped", reason=reason, visitor=limits.mask(ip))
 
 
 def check_limits(visitor: str) -> None:

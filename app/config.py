@@ -1,6 +1,7 @@
 """Central configuration. Everything is read from environment variables (.env locally,
 "Secrets" on Hugging Face Spaces), so the same code runs locally and in the cloud."""
 import os
+import secrets
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -91,5 +92,30 @@ ASK_LIMIT_PER_DAY = int(os.getenv("ASK_LIMIT_PER_DAY", "0"))
 # "Report a problem" form (app/spam.py); 0 = off. Resend's free plan: 100 e-mails a day, 3,000 a month.
 FEEDBACK_LIMIT_PER_HOUR = int(os.getenv("FEEDBACK_LIMIT_PER_HOUR", "5"))   # per visitor
 FEEDBACK_LIMIT_PER_DAY = int(os.getenv("FEEDBACK_LIMIT_PER_DAY", "90"))    # all visitors together
+
+# --- Logs (app/observability.py) ----------------------------------------------------
+# A health question + an IP address can be health data of a real person (GDPR art. 9), so by default the
+# question TEXT is not logged: only its length and a keyed fingerprint (hash). true = log the text (debugging).
+LOG_QUESTIONS = os.getenv("LOG_QUESTIONS", "false").strip().lower() in ("1", "true", "yes", "on")
+# Key for the question fingerprint. Set it on the server so fingerprints stay comparable across restarts;
+# empty = a random key per start (fingerprints then only match within one run).
+LOG_HASH_SECRET = os.getenv("LOG_HASH_SECRET", "").strip() or secrets.token_hex(16)
+
+# --- Health check (app/health.py) --------------------------------------------------------
+# The result of /api/health is reused for this many seconds (the website calls it on every page load).
+HEALTH_CACHE_S = float(os.getenv("HEALTH_CACHE_S", "15"))
+# How long /api/health waits for Qdrant before calling it "down" (normal questions still wait up to 60 s).
+HEALTH_QDRANT_TIMEOUT_S = float(os.getenv("HEALTH_QDRANT_TIMEOUT_S", "3"))
+
+# --- Answer cache (app/cache.py) -----------------------------------------------------------
+# The same question (same country, answer language, top_k) within this many seconds gets the saved answer:
+# no Qdrant / LLM call. Only clean answers are saved (no emergency, no errors, no issues). 0 = cache off.
+ANSWER_CACHE_TTL_S = float(os.getenv("ANSWER_CACHE_TTL_S", "900"))
+ANSWER_CACHE_MAX = int(os.getenv("ANSWER_CACHE_MAX", "300"))  # answers kept at most (~10 KB each, in RAM only)
+
+# --- Metrics (app/metrics.py, GET /api/metrics) -----------------------------------------------
+# Secret token for /api/metrics (header "Authorization: Bearer <token>"). Empty = the endpoint is switched off (404).
+METRICS_TOKEN = os.getenv("METRICS_TOKEN", "").strip()
+METRICS_WINDOW = int(os.getenv("METRICS_WINDOW", "1000"))  # p50/p95 over the last N answers per stage
 
 DATA_FILE = ROOT / "data" / "labels.jsonl"

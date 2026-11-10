@@ -14,7 +14,7 @@ from functools import lru_cache
 from fastembed import TextEmbedding
 from qdrant_client import QdrantClient, models
 
-from . import config
+from . import config, observability
 
 
 _embedders: dict[str, TextEmbedding] = {}
@@ -89,13 +89,23 @@ def remote_embed(texts: list[str], model: str) -> list[list[float]]:
     return out
 
 
+# When the Hugging Face embedding API last failed / worked (time.time()), for /api/health: a recent failure means
+# questions fall back to the local model, which is slow and may not fit into the 512 MB server.
+remote_embed_last_failure: float | None = None
+remote_embed_last_success: float | None = None
+
+
 def embed_query(text: str, model: str | None = None) -> list[float]:
+    global remote_embed_last_failure, remote_embed_last_success
     model = model or config.EMBED_MODEL
     if model in config.REMOTE_EMBED_MODELS and config.HF_TOKEN:
         try:
-            return remote_embed([text], model)[0]
+            vector = remote_embed([text], model)[0]
+            remote_embed_last_success = time.time()
+            return vector
         except Exception as e:  # noqa: BLE001 -- e.g. free API credits used up: fall back to the local model
-            print(f"[embed] remote failed, using local model: {e}", flush=True)
+            remote_embed_last_failure = time.time()
+            observability.log_event("remote_embed_failed", model=model, error=f"{type(e).__name__}: {e}")
     light = get_query_embedder(model)
     if light is not None:
         return light.embed(text)
@@ -108,6 +118,17 @@ def get_client() -> QdrantClient:
     if config.QDRANT_URL:
         return QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY or None, timeout=60)
     return QdrantClient(path=config.QDRANT_LOCAL_PATH)  # embedded local mode
+
+
+@lru_cache(maxsize=1)
+def get_health_client() -> QdrantClient:
+    """Client for /api/health only: same cluster, but gives up after HEALTH_QDRANT_TIMEOUT_S instead of 60 s,
+    so a hanging Qdrant makes health say "down" quickly. Local mode: the same client (a local Qdrant folder can
+    be opened by only one client at a time)."""
+    if config.QDRANT_URL:
+        return QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY or None,
+                            timeout=max(1, round(config.HEALTH_QDRANT_TIMEOUT_S)))
+    return get_client()
 
 
 def recreate_collection(dim: int, name: str | None = None, keyword_fields: tuple[str, ...] = ("drug",),

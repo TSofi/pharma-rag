@@ -58,11 +58,15 @@ is 1 function but 6 cases. Both numbers are given below.
 | 7c | unknown JSON fields → 400 (strict); the frontend's fields are read from `app.js` and must be known | `test_api_fields.py` | 8 | 17 | done | `main.py`: `model_config = ConfigDict(extra="forbid")` on `AskRequest` and `FeedbackRequest` |
 | 7d | limit on questions per visitor (10/min, 200/day → 429); real visitor = last address in the proxy note; report form uses it too | `test_api_limits.py` | 18 | 29 | done, **needs a check on Render** (see report) | new `limits.py` (`client_ip`, `visitor_key`, `mask`, `RateLimit`, `limit_ask`); `main.py`: `limits.limit_ask(request)` in `/api/ask`, report form counts by `limits.client_ip`; `config.py` + `.env.example`: `ASK_LIMIT_PER_MINUTE`, `ASK_LIMIT_PER_DAY`; `tests/conftest.py`: counters reset before every test |
 | 7e | report form spam checks without accounts: time trap (< 3 s or no timer = bot), same visitor + same text within 24 h, 5/hour per visitor, 90 e-mails/day in total, message must have letters and ≤ 2 links, contact cleaned, screenshot must really be an image, counters forget old visitors | `test_api_report.py` | 25 | 49 | done | new `spam.py`; `inputs.py`: `ReportMessage`, `Contact`, `clean_message`; `feedback.py`: `is_real_image`, old `_recent`/`allowed` removed; `limits.py`: `RateLimit` forgets visitors with nothing left in the window; `main.py`: new field `form_ms`, report endpoint uses `spam`; `config.py` + `.env.example`: `FEEDBACK_LIMIT_PER_HOUR`, `FEEDBACK_LIMIT_PER_DAY`; `frontend/app.js`: timer started when the form opens, `form_ms` sent |
+| O1 | structured logs + request id: one JSON line per `/api/` call, same id in header / body / every log line, question text not logged by default (GDPR) | `test_logging.py` | 16 | 20 | done | new `observability.py` (`RequestLog` middleware, `log_event`, `note`, `question_hash`); `main.py`: middleware, `request_id` in the answer, CORS exposes `X-Request-ID`; `errors.py`: every error JSON has `request_id`, crash uses the same id; `rag.py`/`llm.py`/`store.py`/`limits.py`/`spam.py`: 21 `print` → `log_event`; `config.py` + `.env.example`: `LOG_QUESTIONS`, `LOG_HASH_SECRET` |
+| O2 | honest `/api/health`: ok / degraded (200) / down (503) from Qdrant (real call, 3 s max), LLM circuit breaker (no LLM call), HF embeddings; 15 s cache | `test_health.py` | 15 | 15 | done | new `health.py`; `llm.py`: read-only `breaker_state()`; `store.py`: `get_health_client()` (short timeout), `remote_embed_last_failure/_success`; `main.py`: `/api/health` → 503 when down; `config.py` + `.env.example`: `HEALTH_CACHE_S`, `HEALTH_QDRANT_TIMEOUT_S`; 1 line each in `test_api_fields.py` and `test_api_limits.py` (see report) |
+| O3 | answer cache: same question (normalized) + market + answer language + top_k within 15 min → saved answer; only clean answers (allowlist of modes; never emergency, errors, unchecked meaning, issues) | `test_cache.py` | 21 | 33 | done | new `cache.py`; `observability.py`: `ISSUE_EVENTS`, `issues` in the request line, `current_issues()`; `rag.py`: `fallback()` logs `fallback_failed` (was silent); `main.py`: cache lookup / store in `/api/ask`, `cached` field; `config.py` + `.env.example`: `ANSWER_CACHE_TTL_S`, `ANSWER_CACHE_MAX`; `conftest.py`: cache cleared before/after every test (agreed) |
+| O4 | metrics `GET /api/metrics` (token): questions per country / mode / language, cache hit rate, errors 4xx/5xx by code, issues, p50/p95/max latency per stage (last 1000 fresh answers; hits separate), LLM fallbacks + breaker trips, top drugs | `test_metrics.py` | 19 | 23 | done | new `metrics.py`; `observability.py`: every log line is also counted (`record_request` / `record_event`); `llm.py`: `_trip()` logs `llm_benched` (was silent); `main.py`: `/api/metrics` with `HTTPBearer` (Swagger "Authorize"), 404 when off, 401 for a wrong token; `errors.py`: 401 in the code list; `config.py` + `.env.example`: `METRICS_TOKEN`, `METRICS_WINDOW` |
 | 7 | other HTTP endpoints (health, drugs, fact, warm-up) | `test_api.py` | ~5 | | todo | |
 | 8 | embeddings + Qdrant config | `test_store.py` | ~5 | | todo | |
 | 9 | chunk building / ingest | `test_ingest.py` | ~5 | | todo | |
 | 10 | real retrieval (slow, manual) | `tests/integration/` | ~4 | | todo | |
-| | **total now** | | **298** | **721** | | |
+| | **total now** | | **369** | **812** | | |
 
 Line coverage after group 6: `rag.py` 95 %, `markets.py` 100 %, `doc_text.py` 95 %, `llm.py` 88 % (was 18 %),
 `main.py` 72 %, `feedback.py` 90 %, `store.py` 20 %, `ingest_markets.py` 0 %. In `llm.py` the missing lines are
@@ -406,6 +410,159 @@ fake PNG → 400, a real report reaches the mail step).
   like a real PNG (it was all zeros; the new check refuses that, correctly).
 - `test_api_fields.py`: `FEEDBACK_FIELDS` + `form_ms`, on purpose (that test exists to make new fields a conscious change).
 
+## Report: structured logs + request id (observability part 1, `test_logging.py`)
+
+**Before:** 22 `print()` calls, some JSON, some plain text (`[llm] groq failed...`), none with a request id:
+with several users at once, a "groq failed" line could not be linked to its question. The crash id shown to
+the user was made separately from everything else.
+
+**Now:** `app/observability.py`.
+- `RequestLog` (ASGI middleware, outermost): every request gets an id (a safe `X-Request-ID` from the client is
+  reused: 8-64 characters `A-Za-z0-9_-`; anything else is replaced, so nobody can forge log lines). The id is
+  returned in the `X-Request-ID` header; every `/api/` call writes ONE final `"event": "request"` line with
+  method, path, status, `duration_ms` and whatever the code added with `note()`.
+- For `/api/ask` that line also has: `question_len`, `question_hash`, `market`, `language`, `answer_language`,
+  `top_k`, `detected_drugs`, `found`, `mode`, `risk`, `model`, `meaning_check`, `uncited_sentences`,
+  `timings` (`embed_ms`, `vector_search_ms`, `llm_ms`, `judge_ms`, `total_ms`...), and `error` on failure.
+  rag's old separate `"ask"` line is merged into it (scripts without an API request still print `"ask"`).
+- Extra events keep their own line, with the same id: `llm_failed`, `llm_unavailable`, `ask_failed`,
+  `judge_unavailable`, `judge_unreadable`, `translation_failed`, `citation_repair_failed`,
+  `number_repair_failed`, `meaning_repair_failed`, `uncited_answer_rejected`, `wrong_numbers_rejected`,
+  `wrong_meaning_rejected`, `emergency_without_llm`, `remote_embed_failed`, `rate_limited`, `report_dropped`,
+  `feedback_failed`, `crash` (traceback as a field), `warmup_skipped`.
+- Every error JSON (400/404/405/413/429/500/502/503) carries `request_id`; the 500 text says "error id <same id>".
+- Privacy: `LOG_QUESTIONS=false` (default) → no question text in any line, only `question_len` and
+  `question_hash` = HMAC-SHA256(`LOG_HASH_SECRET`, lower-cased question without extra spaces), 12 hex characters.
+  Safety net: the exact question text is replaced by `[question]` inside any other logged string (e.g. an error
+  message that echoes the input). Not covered: a service that echoes only PART of the question, and answer
+  sentences in `wrong_meaning_rejected` (first 80 characters, as before). The IP is never in the request line.
+
+**Verified:** all 721 existing tests pass without edits; 20 new cases. Mutation check (the code broken on
+purpose, tests must fail): crash with its own id, no redaction, text always logged, two lines per question,
+no id in errors, any client id trusted, hash without normalising, static files logged, id kept in a global
+instead of a contextvar → each caught by at least one test. The parallel test was run 20× (no flakes).
+Manual: real `uvicorn` start, `X-Request-ID` header and JSON lines checked.
+
+**Set on Render:** `LOG_HASH_SECRET` (any long random text), otherwise fingerprints change at every restart.
+
+## Report: honest health check (observability part 2, `test_health.py`)
+
+**Before:** `{"status": "ok"}` always, even with Qdrant unreachable or every LLM benched; a hanging Qdrant made
+health wait up to 60 s (the normal client timeout).
+
+**Now:** `app/health.py`.
+
+| status | HTTP | when |
+|---|---|---|
+| `ok` | 200 | everything works |
+| `degraded` | 200 | the site answers, with less backup: an LLM provider benched (`cooling_down`) or listed without a key (`no_key`); a country's Qdrant collection missing (`missing_markets`); the HF embedding API failed in the last 5 min and has not worked since |
+| `down` | 503 | Qdrant unreachable or slower than `HEALTH_QDRANT_TIMEOUT_S` (3 s); or no LLM usable (all benched / no key at all) |
+
+- Qdrant: one real `get_collections()` through a separate client with a short timeout, run in a small worker
+  pool so even a hanging client can't hold health longer than the timeout.
+- LLMs: `llm.breaker_state()` reads `_cooldown_until`; it never calls a provider and never starts the Gemini
+  model discovery (no quota used). Already discovered Gemini backups count as usable providers.
+- 15 s cache with a lock: many page loads at once = one Qdrant call.
+- 503 answer = the usual error fields (`detail`, `error: UNAVAILABLE`, `request_id`) + the full report +
+  `Retry-After: 15`. Public: states only (`timeout`, `unreachable`, `cooling_down`...); error texts go to the
+  log as `health_check_failed` (only when a fresh check runs, not for cached answers). The request log line gets
+  `"health": "<status>"`.
+- Kept for the keepalive: `qdrant_collections` (a number when Qdrant answers, `null` when down), `llm`,
+  `vector_db`, `drugs`, `markets`. A down service now makes `curl -f` fail → the workflow fails → GitHub e-mails
+  the owner. The test reads the grep pattern from `keepalive.yml` itself.
+
+**Changes to existing tests (agreed, 1 line each):** `test_api_fields.py::test_extra_address_parameters_are_still_ignored`
+and `test_api_limits.py::test_other_addresses_are_not_limited` switch Qdrant off on purpose and expected health
+= 200. Their point is "extra URL parameters are ignored" / "health is not rate-limited", so the health assertion
+is now `!= 400` / `!= 429` (the honest answer there is 503).
+
+**Bugs found by the new tests while writing them:** (1) the report's `status` key clashed with the `status`
+parameter of `error_response()` → every "down" was a 500 crash; (2) copying the error's headers copied its
+`Content-Length` too (121 bytes for a 509-byte body) → `curl` would cut the answer off; the test now compares the
+header with the real length.
+
+**Verified:** mutation check, 12 mutations (always 200, no timeout, benched = ok, all benched not down, missing
+collection ignored, no cache, no lock, success after a failure ignored, failure not recorded, discovered backups
+ignored, error text public, the Content-Length bug) → all caught (the lock only after the fake Qdrant got a
+0.1 s delay, so the threads really overlap). Manual: real `uvicorn`, `curl -fsS` exit code 22 on 503, second
+request served from the cache.
+
+## Report: answer cache (observability part 3, `test_cache.py`)
+
+**Before:** every question ran the whole pipeline (vector search + 1-5 LLM calls), also the same question asked
+again a minute later.
+
+**Now:** `app/cache.py`, used in `/api/ask` (after the question limit, so a hit still counts as a question).
+- Key: `normalize_question` (lower case, single spaces; the same function as the log fingerprint) + `market` +
+  requested `answer_language` + `top_k` (missing = `TOP_K`, so "default" and an explicit 6 share an entry).
+- 15 min (`ANSWER_CACHE_TTL_S=900`, 0 = off), at most 300 answers (`ANSWER_CACHE_MAX`), least recently used out
+  first, RAM only, lock for parallel threads, deep copies in and out (a caller editing its copy can't change the
+  saved one). Per-request fields (`request_id`, `timings`, `cached`) are not saved.
+- Saved only if clean (`skip_reason`): mode in the allowlist `sourced / general / playful / none`; never
+  `emergency` (red + soft red), `llm_unavailable`, `meaning_check: "unavailable"`, or any issue. Errors never reach
+  the store.
+- Issues: `observability.ISSUE_EVENTS` = `translation_failed`, `judge_unavailable`, `judge_unreadable`,
+  `citation_repair_failed`, `number_repair_failed`, `meaning_repair_failed`, `uncited_answer_rejected`,
+  `wrong_numbers_rejected`, `wrong_meaning_rejected`, `fallback_failed`. Logging one of them adds it to `issues`
+  in the request line. Not issues: `llm_failed` (another provider answered) and `remote_embed_failed` (same model
+  locally).
+- New log event `fallback_failed`: when the LLM of the "not found" step (`fallback()`) failed, the user silently
+  got the plain "not found" text with no log line at all. Found while planning the cache.
+- Response: `"cached": true/false`; a hit gets a new `request_id` and `timings: {"total_ms": <lookup>}` only. The UI
+  does not show that an answer was cached (decision). Log: `"cache": "hit" | "miss" | "skip" | "off"` +
+  `cache_skip_reason` (`error`, `emergency`, `llm_unavailable`, `meaning_check_unavailable`, `issues`,
+  `unknown_mode`); a hit also logs mode / found / languages / detected drugs of the saved answer (for the metrics).
+- Not done on purpose: two identical questions in the same second both run the pipeline (rare; no "single flight").
+
+**Design change found by the existing tests:** the first version was a blocklist (cache everything except ...).
+`test_api_limits.py` asks the same question 10-20 times with a fake answer `{"answer": "ok [1]"}` (no mode) and
+counts pipeline calls: those answers got cached and 3 tests failed. Fixed in the app, not in the tests: an
+allowlist of known complete modes, so nothing new or broken is cached by accident.
+
+**Verified:** all existing tests pass (only `conftest.py` changed, as agreed). Mutation check, 16 mutations
+(emergency cached, unchecked meaning cached, issues ignored / not collected, no allowlist, `none` missing from it,
+market not in the key, no normalizing, no TTL, FIFO instead of LRU, no copy, no size limit, old timings kept,
+`fallback()` silent again, rate limit skipped, `llm_unavailable` rule removed) → all caught; the last one only
+after `test_each_rule_blocks_on_its_own` was added (the soft red card is also mode `emergency`, so the other rule
+hid it). Manual: real `uvicorn` with a fake search + a 1.5 s fake LLM: first answer 1.6 s, the same question with
+other spaces/capitals 0.002 s, `"cache": "hit"`, same `question_hash`.
+
+## Report: metrics (observability part 4, `test_metrics.py`)
+
+**Before:** no numbers at all; only the raw log.
+
+**Now:** `app/metrics.py` + `GET /api/metrics`.
+- Counted from the same final `request` line (and the other events) the log gets, in `observability.log_event`:
+  logs and metrics can't disagree, and every counting rule is in one place.
+- `questions`: total / answered / failed (every `POST /api/ask`, also 400/429), `by_market`, `by_mode`,
+  `by_language` (answered only). `cache`: hits, misses, skipped by reason, `hit_rate` = hits / all lookups.
+  `errors`: every `/api/` path except `/api/health` (its 503 is a status report) and `/api/metrics`; `total`,
+  `client_4xx`, `server_5xx`, `by_code`, `by_path`. `issues`: `answers_with_issues` + `by_event`.
+- `latency_ms`: `count` / `p50` / `p95` / `max` for `total` and every stage in `timings` (embed, vector_search,
+  translate, llm, judge, refusal...), over the last `METRICS_WINDOW` (1000) fresh answers; cache hits in their own
+  `cache_hit` group. Percentile = nearest rank (the ceil(p·n)-th smallest value; p95 of 1..100 = 95).
+- `llm`: `fallbacks` (`llm_failed` per provider), `benched` (new event `llm_benched`, logged by `_trip()`; was
+  silent), `breaker_now` (`llm.breaker_state()`). `top_drugs`: top 20 per country, at most 1000 names per country
+  (the rest counts as `(other)`). `events`: every event name with its count. `started_at` / `uptime_s`: RAM only,
+  everything restarts at 0 after a restart.
+- No question text or fingerprint anywhere in the metrics.
+- Token: `METRICS_TOKEN` empty → 404 (off); missing / wrong / `Basic` → 401 + `WWW-Authenticate: Bearer`; compared
+  with `hmac.compare_digest`. Declared as `HTTPBearer`, so Swagger (`/docs`) has an "Authorize" button (the path is
+  therefore listed in `/docs`; the protection is the token).
+
+**Verified:** all existing tests pass unchanged. Mutation check, 15 mutations (no off switch, no token check, a
+prefix of the token accepted, p95 off by one, values not sorted, hits mixed into latency, no window, health 503
+counted as an error, drug list unbounded, no lock, issues not counted, hit rate ignoring skips, `llm_benched`
+silent, request lines not counted, `/api/metrics` calls counted) → 13 caught at once. `/api/metrics calls
+counted` was an equivalent mutation: the early `return` was dead code (the path is never a question and its 401
+is already excluded) and was removed. `no lock` survived the first thread test: in CPython a single `+= 1` on a
+dict practically never loses updates (the GIL), and `list(deque)` copies in C, so neither "lost updates" nor
+"deque mutated during iteration" can be shown. What the lock really guarantees is a CONSISTENT snapshot (one
+question updates several counters one after another); `test_every_snapshot_is_consistent_while_questions_are_recorded`
+checks `total == answered + failed == by_market == misses` in 1000 snapshots while 4 threads record: without the
+lock it failed 10/10 runs, with it passed 10/10 (a race test can't be 100 % certain, but this is reliable here).
+Manual: real `uvicorn` with a fake search + LLM, `curl` with no / wrong / right token (401 / 401 / 200 + JSON).
+
 ## Remaining groups (detail)
 
 ### 5. `test_ask_edges.py` – branches of `rag.ask()`
@@ -483,7 +640,7 @@ CAUTION, "doctor said crush it" → NONE, "what is the dose" → NONE). Until th
 - ~~7c: unknown fields → 400 (`extra="forbid"`), e.g. a typo `answerLanguage`~~ **done in 7c**
 - ~~point 4: limit on questions per visitor (429)~~ **done in 7d**; ⚠️ the visitor address rule still needs the check on Render (see "Report: question limit")
 - ~~point 5: report form spam checks without accounts (time trap, daily cap, links, duplicates, real image check)~~ **done in 7e**
-- `/api/health`: degrades to `"error: ..."` when Qdrant is down, still 200
+- ~~`/api/health`: degrades to `"error: ..."` when Qdrant is down, still 200~~ **done in O2** (now 503 "down")
 - `/api/drugs?market=`, `/api/fact?lang=` + `seen=`
 - startup warm-up never blocks (exception swallowed)
 
@@ -505,6 +662,26 @@ CAUTION, "doctor said crush it" → NONE, "what is the dose" → NONE). Until th
 - Polish question finds a Czech passage; "alkoholem" query ranks the alcohol passage first
 - int8 vs float32 query vector: cosine ≈ 1.0; score of a correct hit ≥ `MIN_SCORE_MULTI`
 - plus: extend `eval/questions.jsonl` with ~30 PL/UA/CZ/ES/FR and cross-language questions
+
+## To do later: frontend privacy (GDPR) + translations (planned, NOT done; frontend and README untouched)
+
+- **Privacy dialog** (footer button next to "Data sources"), 6 languages: question text not logged (only length +
+  fingerprint, `LOG_QUESTIONS=false`); questions kept in server RAM for max. 15 min (answer cache), then deleted; IP
+  only for the question limit, masked in logs; the question is sent to Groq / Google Gemini (answer) and Hugging
+  Face (embedding), Qdrant gets only vectors; no cookies or tracking, `localStorage` keeps only settings; "Report a
+  problem" sends the last question/answer, page address, browser type and screenshot only when the user sends it;
+  please don't write names or personal details. A test should keep these texts true (cache minutes =
+  `ANSWER_CACHE_TTL_S`, every provider in `config.py` named).
+- **GDPR, decide:** the report form's "Attach my last question and answer" checkbox is **ticked by default**
+  (`index.html`, `#repCtx checked`). That question can be health data, and consent should be opt-in, so it should be
+  unticked by default.
+- **Translations to check by a native speaker** (or at least a back-translation with another tool): every new
+  privacy text in uk, pl, cs, es, fr. It's legal text, so the meaning matters more than the style. Same as S7 / S8
+  below.
+- Optional: "How we check answers" section + a test catalog page generated from the "Catches: …" docstrings
+  (English, translated intro). `top_drugs` on the frontend: skipped (counts reset on restart; needs ≥ 5 asks per
+  name, rate limit on, neutral wording).
+- **Render settings after deploy:** `LOG_HASH_SECRET` and `METRICS_TOKEN` (long random texts).
 
 ## Open suggestions (found while testing, not changed)
 

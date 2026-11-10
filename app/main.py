@@ -1,17 +1,25 @@
 """FastAPI app. Endpoints:
-  GET  /api/health   -> is the service up, which LLM/vector DB are used
+  GET  /api/health   -> ok / degraded (200) or down (503): Qdrant, LLM circuit breaker, embeddings (app/health.py)
   GET  /api/drugs    -> drugs in the knowledge base
   GET  /api/fact     -> short "did you know?" fact for the loading screen
   POST /api/ask      -> {question} -> answer + cited sources
+  GET  /api/metrics  -> counters, cache, errors, p50/p95 latency (needs METRICS_TOKEN, app/metrics.py)
   GET  /docs         -> automatic Swagger UI
   GET  /             -> the frontend (served from ./frontend when running locally or on HF)
 """
-from fastapi import FastAPI, Request
+import hmac
+import json
+import time
+
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import config, errors, feedback, limits, llm, rag, spam
+from . import cache, config, errors, feedback, health, limits, llm, observability, rag, spam
+from .metrics import metrics
 from .inputs import AnswerLanguage, Contact, Market, Question, ReportMessage, UiLanguage
 
 from contextlib import asynccontextmanager
@@ -33,7 +41,7 @@ async def lifespan(_app):
         for m in config.MARKETS:
             rag.markets.index(m)  # load the product indexes (~1 s) before the first question
     except Exception as e:  # noqa: BLE001 -- never block startup on warm-up
-        print(f"warm-up skipped: {e}", flush=True)
+        observability.log_event("warmup_skipped", error=f"{type(e).__name__}: {e}")
     yield
 
 
@@ -45,9 +53,15 @@ app = FastAPI(title="PharmaRAG", description="Drug-label Q&A with traceable sour
 errors.install(app)
 
 # CORS lets the browser call this API from another domain (the Vercel frontend).
+# expose_headers: lets the frontend's JavaScript read X-Request-ID (browsers hide other headers by default).
 app.add_middleware(
-    CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=["GET", "POST"], allow_headers=["*"]
+    CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=["GET", "POST"], allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
+
+# Structured logs: a request id for every request + one JSON log line per /api/ call (app/observability.py).
+# Added last = the outermost layer, so it also sees the final status of errors and crashes.
+app.add_middleware(observability.RequestLog)
 
 
 class AskRequest(BaseModel):
@@ -61,20 +75,37 @@ class AskRequest(BaseModel):
 
 
 @app.get("/api/health")
-def health():
+def health_check():
     # Touches Qdrant on purpose: a daily ping (GitHub Actions) keeps the free cluster from being suspended.
-    try:
-        qdrant = len(store.get_client().get_collections().collections)
-    except Exception as e:  # noqa: BLE001
-        qdrant = f"error: {type(e).__name__}"
-    return {
-        "status": "ok",
-        "qdrant_collections": qdrant,
-        "llm": config.LLM_PROVIDER,
-        "vector_db": "qdrant-cloud" if config.QDRANT_URL else "qdrant-local",
-        "drugs": len(rag.library()),
-        "markets": {m: len(rag.library(m)) for m in config.MARKETS},
-    }
+    # "down" = questions can't be answered -> 503, so `curl -f` in the keepalive fails and GitHub e-mails the owner.
+    report = health.report()
+    observability.note(health=report["status"])
+    if report["status"] == "down":
+        broken = ", ".join(name for name, c in report["checks"].items() if c["status"] == "down")
+        error = errors.error_response(503, "UNAVAILABLE", f"Not able to answer questions right now ({broken} down).",
+                                      headers={"Retry-After": str(round(config.HEALTH_CACHE_S))})
+        # the usual error fields (detail, error, request_id) + the full report, so the keepalive log shows what broke
+        return JSONResponse({**json.loads(error.body), **report}, status_code=503,
+                            headers={"Retry-After": error.headers["retry-after"]})
+    return report
+
+
+# "Bearer" security: the token goes in the header "Authorization: Bearer <token>", never in the address (addresses
+# end up in browser history and logs). Declaring it this way also gives Swagger (/docs) its "Authorize" button.
+_metrics_token = HTTPBearer(auto_error=False, scheme_name="METRICS_TOKEN",
+                            description="The METRICS_TOKEN from the server settings")
+
+
+@app.get("/api/metrics")
+def get_metrics(creds: HTTPAuthorizationCredentials | None = Depends(_metrics_token)):
+    if not config.METRICS_TOKEN:  # not set up = switched off
+        return errors.error_response(404, "NOT_FOUND", "Not Found")
+    sent = creds.credentials if creds else ""
+    # compare_digest takes the same time however many characters match, so the token can't be guessed letter by letter
+    if not hmac.compare_digest(sent.encode(), config.METRICS_TOKEN.encode()):
+        raise errors.ApiError(401, "UNAUTHORIZED", "A valid metrics token is required (Authorization: Bearer ...).",
+                              headers={"WWW-Authenticate": "Bearer"})
+    return metrics.snapshot()
 
 
 @app.get("/api/drugs")
@@ -90,24 +121,55 @@ def fact(seen: str = "", lang: UiLanguage = "en"):
 
 @app.post("/api/ask")
 def ask(req: AskRequest, request: Request):
+    # What the final log line knows about this question (text only if LOG_QUESTIONS, else length + hash).
+    observability.note_question(req.question)
+    observability.note(market=req.market, answer_language=req.answer_language, top_k=req.top_k)
     limits.limit_ask(request)  # 429 after ASK_LIMIT_PER_MINUTE / ASK_LIMIT_PER_DAY questions (app/limits.py)
+
+    # Same question (same country, answer language, top_k) in the last 15 min: the saved answer (app/cache.py).
+    t0 = time.perf_counter()
+    key = cache.answers.key(req.question, req.market, req.answer_language, req.top_k)
+    saved = cache.answers.get(key)
+    if saved is not None:
+        took = round((time.perf_counter() - t0) * 1000)
+        observability.note(cache="hit", timings={"total_ms": took},
+                           **{k: saved[k] for k in _CACHED_LOG_FIELDS if k in saved})
+        # The old stage timings would be misleading (nothing was searched or generated): only the lookup time.
+        return {**saved, "cached": True, "timings": {"total_ms": took}, "request_id": observability.current_id()}
+    cache_state = {"cache": "skip", "cache_skip_reason": "error"} if cache.answers.enabled() else {"cache": "off"}
+
     try:
-        return rag.ask(req.question, req.top_k, req.answer_language, req.market)
+        result = rag.ask(req.question, req.top_k, req.answer_language, req.market)
     except llm.LLMUnavailable as e:
         # Every AI provider is down/busy: a clean 503 (the UI shows "busy, try again" + a retry button).
         # The raw provider errors go to the log only.
-        print(f"[api] LLM unavailable: {e}", flush=True)
+        observability.note(**cache_state)  # errors are never cached
+        observability.log_event("llm_unavailable", error=str(e))
         raise errors.ApiError(503, "LLM_UNAVAILABLE", headers={"Retry-After": str(e.retry_after_s)},
                               detail=f"LLM_UNAVAILABLE: the AI service is busy right now. "
                                      f"Please try again in {e.retry_after_s} s.") from e
     except Exception as e:  # Qdrant / embeddings / LLM failed: details to the log only, never to the user
-        print(f"[api] ask failed: {type(e).__name__}: {e}", flush=True)
+        observability.note(**cache_state)
+        observability.log_event("ask_failed", error=f"{type(e).__name__}: {e}")
         if errors.looks_busy(e):  # "503 overloaded", "429 too many": busy, not broken -> the UI offers a retry
             raise errors.ApiError(503, "SERVICE_BUSY", headers={"Retry-After": "10"},
                                   detail="SERVICE_BUSY (503): a service we use is busy right now. "
                                          "Please try again in 10 s.") from e
         raise errors.ApiError(502, "UPSTREAM_ERROR", "The search service is not responding right now. "
                                                      "Please try again in a moment.") from e
+    if not cache.answers.enabled():
+        observability.note(cache="off")
+    elif reason := cache.skip_reason(result, observability.current_issues()):
+        # emergency / LLM down / unchecked meaning / an issue: not saved, the next asker gets a fresh try
+        observability.note(cache="skip", cache_skip_reason=reason)
+    else:
+        cache.answers.put(key, result)
+        observability.note(cache="miss")
+    return {**result, "cached": False, "request_id": observability.current_id()}
+
+
+# What a cache hit writes into its log line (the rest, e.g. risk or issues, belongs to the original answer).
+_CACHED_LOG_FIELDS = ("language", "answer_language", "detected_drugs", "found", "mode", "model", "meaning_check")
 
 
 class FeedbackRequest(BaseModel):
@@ -137,7 +199,7 @@ def send_feedback(req: FeedbackRequest, request: Request):
     except ValueError as e:  # only the screenshot check raises this; the text is ours, safe to show
         raise errors.ApiError(400, "INVALID_IMAGE", str(e)) from e
     except Exception as e:  # noqa: BLE001 -- mail service down: details to the log only
-        print(f"[api] feedback failed: {type(e).__name__}: {e}", flush=True)
+        observability.log_event("feedback_failed", error=f"{type(e).__name__}: {e}")
         raise errors.ApiError(502, "UPSTREAM_ERROR", "Could not send the report right now. "
                                                      "Please try again later.") from e
     spam.remember_sent(visitor, req.message)  # only e-mails really sent count (daily total, same-text check)

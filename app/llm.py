@@ -15,7 +15,7 @@ import contextvars
 import re
 import time
 
-from . import config
+from . import config, observability
 
 
 class LLMUnavailable(RuntimeError):
@@ -255,6 +255,35 @@ def _available(name: str) -> bool:
 
 def _trip(name: str) -> None:
     _cooldown_until[name] = time.time() + COOLDOWN_S
+    observability.log_event("llm_benched", provider=name, seconds=COOLDOWN_S)  # was silent; counted by metrics
+
+
+def breaker_state() -> dict[str, dict]:
+    """Read-only view of the circuit breaker for /api/health: every provider/model of LLM_PROVIDERS and whether
+    it can be used right now. Never calls a provider (no quota used) and never starts the model discovery.
+      {"groq": {"status": "cooling_down", "retry_in_s": 240}, "gemini:gemini-3.8-flash": {"status": "ok"}}
+    status: ok | cooling_down (benched after a failure, for COOLDOWN_S) | no_key (listed, but no API key set)"""
+    keys: dict[str, bool] = {}  # breaker key -> has an API key
+    for provider in config.LLM_PROVIDERS:
+        if provider == "groq":
+            keys["groq"] = bool(config.GROQ_API_KEY)
+        elif provider == "anthropic":
+            keys["anthropic"] = bool(config.ANTHROPIC_API_KEY)
+        elif provider == "gemini":
+            models = [config.GEMINI_MODEL] + config.GEMINI_FALLBACK_MODELS + (_discovered or [])
+            for m in dict.fromkeys(models):
+                keys[f"gemini:{m}"] = bool(config.GEMINI_API_KEY)
+    now = time.time()
+    state = {}
+    for key, has_key in keys.items():
+        left = _cooldown_until.get(key, 0) - now
+        if not has_key:
+            state[key] = {"status": "no_key"}
+        elif left > 0:
+            state[key] = {"status": "cooling_down", "retry_in_s": int(left) + 1}
+        else:
+            state[key] = {"status": "ok"}
+    return state
 
 
 def _candidates():
@@ -309,7 +338,7 @@ def generate(system: str, user: str) -> str:
             return attempt(key, label, call, attempts=2)
         except Exception as e:  # noqa: BLE001
             errors.append(f"{key}: {type(e).__name__}: {str(e)[:200]}")
-            print(f"[llm] {key} failed, trying the next one: {errors[-1]}", flush=True)
+            observability.log_event("llm_failed", provider=key, error=errors[-1])
             if not _is_request_error(e) and not isinstance(e, LLMUnavailable):
                 _trip(key)
 

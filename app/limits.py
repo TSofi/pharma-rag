@@ -10,13 +10,12 @@ entry. No note (local run) -> the direct caller. NOT yet confirmed on the live s
 Counters live in memory: they reset when the server restarts (fine for this purpose).
 """
 import ipaddress
-import json
 import math
 import threading
 import time
 from collections import OrderedDict, deque
 
-from . import config
+from . import config, observability
 from .errors import ApiError
 
 now = time.monotonic  # replaced by a fake clock in the tests
@@ -142,10 +141,10 @@ def limit_ask(request) -> None:
     seconds = max(1, math.ceil(wait))
     if ask_limiter.first_block_this_minute(key):
         notes = request.headers.getlist("x-forwarded-for")
-        print(json.dumps({"event": "rate_limited", "endpoint": "/api/ask", "visitor": mask(ip),
-                          "rule": "per_day" if seconds > 60 else "per_minute", "retry_after_s": seconds,
-                          # how many addresses the proxy note had: helps to check the Render setup
-                          "proxy_note_entries": sum(len(n.split(",")) for n in notes)}), flush=True)
+        observability.log_event("rate_limited", endpoint="/api/ask", visitor=mask(ip),
+                                rule="per_day" if seconds > 60 else "per_minute", retry_after_s=seconds,
+                                # how many addresses the proxy note had: helps to check the Render setup
+                                proxy_note_entries=sum(len(n.split(",")) for n in notes))
     raise ApiError(429, "RATE_LIMITED", headers={"Retry-After": str(seconds)},
                    detail=f"RATE_LIMITED (429): too many questions from your connection. "
                           f"Please try again in {_human(seconds)}.")
